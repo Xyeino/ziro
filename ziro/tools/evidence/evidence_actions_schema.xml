@@ -1,0 +1,91 @@
+<tools>
+  <tool name="capture_evidence">
+    <description>Capture proof artifacts (HTTP requests, command output, screenshots) linked to vulnerability findings.
+
+Use this tool whenever you discover a vulnerability to save the evidence that proves it exists. This creates a professional evidence trail for the penetration test report.</description>
+    <parameters>
+      <parameter name="evidence_type" type="string" required="true">
+        <description>Type of evidence: "http" (request/response pair), "command" (terminal output), or "screenshot" (base64 PNG)</description>
+      </parameter>
+      <parameter name="content" type="string" required="true">
+        <description>The evidence content — HTTP response body, command output, or base64-encoded screenshot</description>
+      </parameter>
+      <parameter name="vuln_id" type="string" required="false">
+        <description>Vulnerability report ID to link this evidence to (e.g. "vuln-0001")</description>
+      </parameter>
+      <parameter name="description" type="string" required="false">
+        <description>Human-readable description of what this evidence shows</description>
+      </parameter>
+      <parameter name="url" type="string" required="false">
+        <description>URL for HTTP evidence or screenshot context</description>
+      </parameter>
+      <parameter name="method" type="string" required="false">
+        <description>HTTP method (GET, POST, PUT, etc.) — for HTTP evidence</description>
+      </parameter>
+      <parameter name="status_code" type="integer" required="false">
+        <description>HTTP response status code — for HTTP evidence</description>
+      </parameter>
+      <parameter name="command" type="string" required="false">
+        <description>The command that was executed — for command evidence</description>
+      </parameter>
+      <parameter name="exit_code" type="integer" required="false">
+        <description>Command exit code — for command evidence</description>
+      </parameter>
+    </parameters>
+    <returns type="Dict[str, Any]">
+      <description>Response with artifact_id on success</description>
+    </returns>
+    <examples>
+  # Capture HTTP evidence for an XSS finding
+  <function=capture_evidence>
+  <parameter=evidence_type>http</parameter>
+  <parameter=content>&lt;script&gt;alert(1)&lt;/script&gt; reflected in response</parameter>
+  <parameter=vuln_id>vuln-0001</parameter>
+  <parameter=description>XSS payload reflected in search results page</parameter>
+  <parameter=url>https://example.com/search?q=&lt;script&gt;alert(1)&lt;/script&gt;</parameter>
+  <parameter=method>GET</parameter>
+  <parameter=status_code>200</parameter>
+  </function>
+
+  # Capture command output evidence
+  <function=capture_evidence>
+  <parameter=evidence_type>command</parameter>
+  <parameter=content>uid=0(root) gid=0(root) groups=0(root)</parameter>
+  <parameter=vuln_id>vuln-0003</parameter>
+  <parameter=description>Command injection confirmed — executed 'id' command</parameter>
+  <parameter=command>curl https://target.com/api?cmd=id</parameter>
+  <parameter=exit_code>0</parameter>
+  </function>
+    </examples>
+    <notes>
+  ALWAYS capture evidence when:
+  1. A vulnerability is confirmed (link to vuln_id)
+  2. A tool output shows interesting findings
+  3. HTTP responses contain sensitive data or unexpected behavior
+
+  Evidence is saved to the run's evidence/ directory and indexed automatically.
+    </notes>
+  </tool>
+
+  <tool name="list_evidence">
+    <description>List captured evidence artifacts, optionally filtered by vulnerability ID.</description>
+    <parameters>
+      <parameter name="vuln_id" type="string" required="false">
+        <description>Filter by vulnerability ID (e.g. "vuln-0001"). If omitted, lists all evidence.</description>
+      </parameter>
+    </parameters>
+    <returns type="Dict[str, Any]">
+      <description>Response with list of artifact summaries</description>
+    </returns>
+    <examples>
+  # List all evidence
+  <function=list_evidence>
+  </function>
+
+  # List evidence for a specific finding
+  <function=list_evidence>
+  <parameter=vuln_id>vuln-0001</parameter>
+  </function>
+    </examples>
+  </tool>
+</tools>

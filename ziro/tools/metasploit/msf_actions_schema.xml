@@ -1,0 +1,144 @@
+<tools>
+  <tool name="msf_search">
+    <description>Search the Metasploit Framework module database for exploits, auxiliary scanners, post-exploitation modules, and more.
+
+Returns a command to execute via terminal_execute. Parse the results table to identify relevant modules for your target.</description>
+    <parameters>
+      <parameter name="query" type="string" required="true">
+        <description>Search query — module name, keyword, or service (e.g. "apache", "smb", "ssh_login", "eternalblue")</description>
+      </parameter>
+      <parameter name="module_type" type="string" required="false">
+        <description>Filter by module type: exploit, auxiliary, post, payload, encoder, nop, evasion</description>
+      </parameter>
+      <parameter name="platform" type="string" required="false">
+        <description>Filter by target platform: windows, linux, osx, android, php, python, java, etc.</description>
+      </parameter>
+      <parameter name="cve" type="string" required="false">
+        <description>Filter by CVE identifier (e.g. "CVE-2021-44228")</description>
+      </parameter>
+    </parameters>
+    <returns type="Dict[str, Any]">
+      <description>Response with a msfconsole command to execute via terminal_execute and instructions for parsing output.</description>
+    </returns>
+    <examples>
+  # Search for Apache exploits
+  <function=msf_search>
+  <parameter=query>apache</parameter>
+  <parameter=module_type>exploit</parameter>
+  </function>
+
+  # Search by CVE
+  <function=msf_search>
+  <parameter=query>log4j</parameter>
+  <parameter=cve>CVE-2021-44228</parameter>
+  </function>
+
+  # Search for SSH auxiliary scanners
+  <function=msf_search>
+  <parameter=query>ssh_login</parameter>
+  <parameter=module_type>auxiliary</parameter>
+  </function>
+    </examples>
+    <notes>
+  - Always execute the returned command via terminal_execute
+  - Parse the output table for module paths, ranks, and descriptions
+  - Use msf_module_info to get details on promising modules before executing
+  - Before using msf_search, consider calling load_skill("metasploit") for detailed guidance
+    </notes>
+  </tool>
+
+  <tool name="msf_module_info">
+    <description>Get detailed information about a specific Metasploit module — description, options, targets, references, and required settings.
+
+Use this BEFORE msf_execute to understand what options a module needs.</description>
+    <parameters>
+      <parameter name="module_path" type="string" required="true">
+        <description>Full module path (e.g. "exploit/multi/http/apache_log4j_rce", "auxiliary/scanner/ssh/ssh_login")</description>
+      </parameter>
+    </parameters>
+    <returns type="Dict[str, Any]">
+      <description>Response with a msfconsole command to execute via terminal_execute.</description>
+    </returns>
+    <examples>
+  # Get info about an exploit module
+  <function=msf_module_info>
+  <parameter=module_path>exploit/multi/http/apache_log4j_rce</parameter>
+  </function>
+
+  # Get info about an auxiliary scanner
+  <function=msf_module_info>
+  <parameter=module_path>auxiliary/scanner/ssh/ssh_login</parameter>
+  </function>
+    </examples>
+    <notes>
+  - Execute the returned command via terminal_execute
+  - Pay attention to Required options — these must be set in msf_execute
+  - Check the module Rank for reliability assessment
+  - Review References for CVE numbers and advisories
+    </notes>
+  </tool>
+
+  <tool name="msf_execute">
+    <description>Execute a Metasploit module against a target. Builds a resource script and returns a command for terminal_execute.
+
+IMPORTANT: Defaults to check-only mode (verifies vulnerability without exploitation).
+Set check_only=false to actually exploit — requires explicit authorization.
+
+Workflow: msf_search → msf_module_info → msf_execute(check_only=true) → msf_execute(check_only=false) if confirmed.</description>
+    <parameters>
+      <parameter name="module_path" type="string" required="true">
+        <description>Full module path (e.g. "exploit/multi/http/apache_log4j_rce", "auxiliary/scanner/portscan/tcp")</description>
+      </parameter>
+      <parameter name="options" type="string" required="true">
+        <description>JSON object with module options. Must include RHOSTS or RHOST for non-post modules.
+Example: {"RHOSTS": "10.0.0.1", "RPORT": "8080", "TARGETURI": "/api"}</description>
+      </parameter>
+      <parameter name="action" type="string" required="false">
+        <description>Module action to use (for modules with multiple actions, e.g. auxiliary scanners)</description>
+      </parameter>
+      <parameter name="check_only" type="boolean" required="false">
+        <description>If true (default), only verify vulnerability without exploiting. Set to false for actual exploitation.</description>
+      </parameter>
+    </parameters>
+    <returns type="Dict[str, Any]">
+      <description>Response with:
+      - command: msfconsole command to run via terminal_execute
+      - mode: "check" or "exploit"
+      - module: module path used
+      - options: parsed options dict
+      - instruction: guidance for parsing output
+      - warning: present when check_only=false</description>
+    </returns>
+    <examples>
+  # Check if target is vulnerable (safe, default)
+  <function=msf_execute>
+  <parameter=module_path>exploit/multi/http/apache_log4j_rce</parameter>
+  <parameter=options>{"RHOSTS": "10.0.0.1", "RPORT": "8080", "TARGETURI": "/"}</parameter>
+  </function>
+
+  # Run an auxiliary scanner
+  <function=msf_execute>
+  <parameter=module_path>auxiliary/scanner/ssh/ssh_login</parameter>
+  <parameter=options>{"RHOSTS": "10.0.0.1", "USERNAME": "admin", "PASS_FILE": "/usr/share/wordlists/rockyou.txt", "THREADS": "5"}</parameter>
+  <parameter=check_only>false</parameter>
+  </function>
+
+  # Port scan
+  <function=msf_execute>
+  <parameter=module_path>auxiliary/scanner/portscan/tcp</parameter>
+  <parameter=options>{"RHOSTS": "10.0.0.0/24", "PORTS": "22,80,443,8080", "THREADS": "10"}</parameter>
+  <parameter=check_only>false</parameter>
+  </function>
+    </examples>
+    <notes>
+  CRITICAL RULES:
+  1. ALWAYS start with check_only=true to verify before exploiting
+  2. NEVER set check_only=false without explicit user authorization
+  3. ALWAYS use msf_module_info first to understand required options
+  4. The returned command must be executed via terminal_execute with timeout=60
+  5. Parse output markers: [+] = success, [-] = failure, [*] = info, [!] = warning
+  6. Some dangerous payloads and post-exploitation modules are blocked for safety
+  7. For auxiliary scanners, check_only=false is usually needed since they don't have a "check" mode
+    </notes>
+  </tool>
+</tools>

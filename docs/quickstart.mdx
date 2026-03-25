@@ -1,0 +1,76 @@
+---
+title: "Quick Start"
+description: "Install Ziro and run your first security scan"
+---
+
+## Prerequisites
+
+- Docker (running)
+- An LLM API key from any [supported provider](/llm-providers/overview) (OpenAI, Anthropic, Google, etc.)
+
+## Installation
+
+<Tabs>
+  <Tab title="curl">
+    ```bash
+    curl -sSL https://ziro.ai/install | bash
+    ```
+  </Tab>
+  <Tab title="pipx">
+    ```bash
+    pipx install ziro-agent
+    ```
+  </Tab>
+</Tabs>
+
+## Configuration
+
+Set your LLM provider:
+
+```bash
+export ZIRO_LLM="openai/gpt-5.4"
+export LLM_API_KEY="your-api-key"
+```
+
+<Tip>
+For best results, use `openai/gpt-5.4`, `anthropic/claude-opus-4-6`, or `openai/gpt-5.2`.
+</Tip>
+
+## Run Your First Scan
+
+```bash
+ziro --target ./your-app
+```
+
+<Note>
+First run pulls the Docker sandbox image automatically. Results are saved to `ziro_runs/<run-name>`.
+</Note>
+
+## Target Types
+
+Ziro accepts multiple target types:
+
+```bash
+# Local codebase
+ziro --target ./app-directory
+
+# GitHub repository
+ziro --target https://github.com/org/repo
+
+# Live web application
+ziro --target https://your-app.com
+
+# Multiple targets (white-box testing)
+ziro -t https://github.com/org/repo -t https://your-app.com
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="CLI Options" icon="terminal" href="/usage/cli">
+    Explore all command-line options.
+  </Card>
+  <Card title="Scan Modes" icon="gauge" href="/usage/scan-modes">
+    Choose the right scan depth.
+  </Card>
+</CardGroup>

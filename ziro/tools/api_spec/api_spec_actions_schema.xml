@@ -1,0 +1,51 @@
+<tools>
+  <tool name="parse_api_spec">
+    <description>Parse an OpenAPI/Swagger specification to extract a security-prioritized test plan.
+
+Supports OpenAPI 3.x and Swagger 2.x (JSON and YAML). Extracts all endpoints, parameters, auth schemes,
+and generates a risk-scored test plan prioritizing injectable parameters, IDOR candidates, and auth endpoints.
+
+Use this when the target has an API spec (often at /openapi.json, /swagger.json, /api-docs, or /v2/api-docs).</description>
+    <parameters>
+      <parameter name="spec_content" type="string" required="true">
+        <description>The full OpenAPI/Swagger spec content (JSON or YAML string). Fetch it first via terminal_execute (curl) or browser_action.</description>
+      </parameter>
+      <parameter name="base_url" type="string" required="false">
+        <description>Override the base URL from the spec. Useful when the spec has a relative or incorrect server URL.</description>
+      </parameter>
+    </parameters>
+    <returns type="Dict[str, Any]">
+      <description>Response containing:
+      - spec_version: detected OpenAPI/Swagger version
+      - base_url: resolved base URL
+      - total_endpoints: count of endpoints
+      - auth_schemes: list of auth mechanisms
+      - summary: attack surface summary (injectable params, IDOR candidates, etc.)
+      - test_plan: top 50 endpoints sorted by risk score
+      - all_endpoints: complete endpoint list</description>
+    </returns>
+    <examples>
+  # Parse a fetched OpenAPI spec
+  <function=parse_api_spec>
+  <parameter=spec_content>{"openapi":"3.0.0","info":{"title":"API"},"paths":{"/users/{id}":{"get":{"parameters":[{"name":"id","in":"path","required":true,"schema":{"type":"integer"}}]}}}}</parameter>
+  <parameter=base_url>https://api.example.com</parameter>
+  </function>
+    </examples>
+    <notes>
+  Workflow:
+  1. Discover the API spec URL (try /openapi.json, /swagger.json, /api-docs, /v2/api-docs)
+  2. Fetch the spec via terminal_execute: curl -s https://target.com/openapi.json
+  3. Pass the content to parse_api_spec
+  4. Use the test_plan to systematically test endpoints by risk score
+  5. Focus on: injectable parameters, IDOR candidates, auth bypass, file upload endpoints
+
+  The risk score considers:
+  - HTTP method risk (DELETE > PUT/PATCH > POST > GET)
+  - Injectable parameter names (id, user_id, email, query, redirect, etc.)
+  - Request body presence
+  - Path parameters (IDOR potential)
+  - Auth requirements (bypass testing)
+  - File/upload/admin related paths
+    </notes>
+  </tool>
+</tools>

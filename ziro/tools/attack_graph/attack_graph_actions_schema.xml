@@ -1,0 +1,94 @@
+<tools>
+  <tool name="add_attack_node">
+    <description>Add or update a node in the attack graph — a strategic map of your scan progress.
+
+Use this to plan attack paths, track progress on each step, and build a clear picture of the engagement. Each node represents an action (recon, exploit, pivot, etc.) and its status.</description>
+    <parameters>
+      <parameter name="node_id" type="string" required="true">
+        <description>Unique identifier for this node (e.g. "recon-nmap", "exploit-sqli-login", "cred-admin-ssh")</description>
+      </parameter>
+      <parameter name="node_type" type="string" required="true">
+        <description>Type: recon, enumerate, vulnerability, exploit, credential, access, pivot, escalation, exfiltration, persistence</description>
+      </parameter>
+      <parameter name="description" type="string" required="true">
+        <description>What this step does or found (e.g. "Port scan 10.0.0.1 — found SSH, HTTP, MySQL")</description>
+      </parameter>
+      <parameter name="status" type="string" required="false">
+        <description>Status: planned, in_progress, success, failed, blocked, skipped. Default: planned</description>
+      </parameter>
+      <parameter name="parent_id" type="string" required="false">
+        <description>ID of the parent node (creates an edge in the graph)</description>
+      </parameter>
+      <parameter name="target" type="string" required="false">
+        <description>Target host/URL for this action</description>
+      </parameter>
+      <parameter name="technique" type="string" required="false">
+        <description>MITRE ATT&amp;CK technique or tool name</description>
+      </parameter>
+      <parameter name="evidence" type="string" required="false">
+        <description>Key evidence or output from this step (max 500 chars)</description>
+      </parameter>
+      <parameter name="priority" type="integer" required="false">
+        <description>Priority 1-10 (10 = highest). Used by suggest_next_action. Default: 5</description>
+      </parameter>
+    </parameters>
+    <returns type="Dict[str, Any]">
+      <description>Success confirmation with node_id</description>
+    </returns>
+    <examples>
+  # Plan initial recon
+  <function=add_attack_node>
+  <parameter=node_id>recon-nmap</parameter>
+  <parameter=node_type>recon</parameter>
+  <parameter=description>Nmap scan of 10.0.0.1 — discover open ports and services</parameter>
+  <parameter=status>planned</parameter>
+  <parameter=target>10.0.0.1</parameter>
+  <parameter=priority>8</parameter>
+  </function>
+
+  # Record a found vulnerability
+  <function=add_attack_node>
+  <parameter=node_id>vuln-sqli-login</parameter>
+  <parameter=node_type>vulnerability</parameter>
+  <parameter=description>SQL injection in /login endpoint, parameter 'username'</parameter>
+  <parameter=status>success</parameter>
+  <parameter=parent_id>recon-nmap</parameter>
+  <parameter=target>https://10.0.0.1/login</parameter>
+  <parameter=technique>T1190</parameter>
+  <parameter=evidence>sqlmap confirmed: MySQL 5.7, injectable via username param</parameter>
+  </function>
+
+  # Plan exploitation based on finding
+  <function=add_attack_node>
+  <parameter=node_id>exploit-sqli-dump</parameter>
+  <parameter=node_type>exploit</parameter>
+  <parameter=description>Dump user credentials via SQL injection</parameter>
+  <parameter=status>planned</parameter>
+  <parameter=parent_id>vuln-sqli-login</parameter>
+  <parameter=priority>9</parameter>
+  </function>
+    </examples>
+  </tool>
+
+  <tool name="get_attack_graph">
+    <description>Get the current state of the attack graph — all nodes, edges, and statistics.
+
+Returns a tree visualization, stats by type and status, and full node data.</description>
+    <parameters>
+    </parameters>
+    <returns type="Dict[str, Any]">
+      <description>Graph state with tree visualization, stats, nodes, and edges</description>
+    </returns>
+  </tool>
+
+  <tool name="suggest_next_action">
+    <description>Analyze the attack graph and suggest the highest-priority next action.
+
+Looks for: unexploited vulnerabilities, unused credentials, missing escalation attempts, and planned actions. Use this when deciding what to do next.</description>
+    <parameters>
+    </parameters>
+    <returns type="Dict[str, Any]">
+      <description>Prioritized suggestions with reasoning and related node IDs</description>
+    </returns>
+  </tool>
+</tools>
