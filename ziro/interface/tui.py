@@ -106,31 +106,28 @@ class SplashScreen(Static):  # type: ignore[misc]
         " ╚══════╝╚═╝╚═╝  ╚═╝ ╚═════╝",
     ]
     BOMB_LINES = [
-        "    ,--'--,    ",
-        "   / \\|/ \\ ",
-        "  |  ___  |   ",
-        "  | |   | |   ",
-        "  | |___| |   ",
-        "  |  ___  |   ",
-        "   \\_____/    ",
-        "     | |       ",
-        "     | |       ",
-        "    _|_|_      ",
-        "   /_____\\    ",
-        "     \\_/       ",
+        "      ~      ",
+        "     /|\\    ",
+        "    /_|_\\   ",
+        "    |   |    ",
+        "    | ● |    ",
+        "    |   |    ",
+        "    \\___/   ",
+        "     |||     ",
+        "     \\/     ",
     ]
 
-    # Timing (ticks at 0.08s each)
+    # Timing (ticks at 0.07s each)
     PHASE_LOGO = 0
     PHASE_BOMB = 1
     PHASE_FLASH = 2
     PHASE_EXPLODE = 3
     PHASE_DONE = 4
-    LOGO_TICKS = 25       # ~2s
-    BOMB_TICKS = 15       # ~1.2s bomb falling
-    FLASH_TICKS = 4       # ~0.3s white flash
-    EXPLODE_TICKS = 18    # ~1.4s explosion
-    INTERVAL = 0.08
+    LOGO_TICKS = 30
+    BOMB_TICKS = 18
+    FLASH_TICKS = 5
+    EXPLODE_TICKS = 20
+    INTERVAL = 0.07
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
@@ -138,13 +135,9 @@ class SplashScreen(Static):  # type: ignore[misc]
         self._phase = self.PHASE_LOGO
         self._animation_timer: Timer | None = None
         self._version = "dev"
-        self._rng_seed = 42
-
-    def compose(self) -> ComposeResult:
-        self._version = get_package_version()
-        yield Label("", id="splash_content")
 
     def on_mount(self) -> None:
+        self._version = get_package_version()
         self._animation_timer = self.set_interval(self.INTERVAL, self._animate)
         self._render_frame()
 
@@ -174,11 +167,7 @@ class SplashScreen(Static):  # type: ignore[misc]
     def _render_frame(self) -> None:
         import random
 
-        random.seed(self._rng_seed + self._tick * 1000 + self._phase * 100000)
-        try:
-            label = self.query_one("#splash_content", Label)
-        except Exception:
-            return
+        random.seed(42 + self._tick * 997 + self._phase * 100003)
 
         text = Text(justify="center")
 
@@ -193,7 +182,7 @@ class SplashScreen(Static):  # type: ignore[misc]
         else:
             self._frame_done(text)
 
-        label.update(text)
+        self.update(text)
 
     def _frame_logo(self, text: Text) -> None:
         text.append("\n\n")
@@ -201,14 +190,13 @@ class SplashScreen(Static):  # type: ignore[misc]
             text.append(line, style=Style(color=self.PRIMARY, bold=True))
             text.append("\n")
         text.append("\n")
-        text.append("       Welcome to ", style=Style(color="white", bold=True))
+        text.append("     Welcome to ", style=Style(color="white", bold=True))
         text.append("Ziro", style=Style(color=self.PRIMARY, bold=True))
         text.append("!\n", style=Style(color="white", bold=True))
-        text.append(f"         v{self._version}\n", style=Style(dim=True))
-        text.append("    AI Penetration Testing Agent\n\n", style=Style(dim=True))
-        # Shimmer on "Initializing"
-        full = "        Initializing"
-        shine = self._tick % (len(full) + 6)
+        text.append(f"       v{self._version}\n", style=Style(dim=True))
+        text.append("  AI Penetration Testing Agent\n\n", style=Style(dim=True))
+        full = "      Initializing"
+        shine = self._tick % (len(full) + 8)
         for i, ch in enumerate(full):
             d = abs(i - shine)
             if d <= 1:
@@ -223,61 +211,54 @@ class SplashScreen(Static):  # type: ignore[misc]
 
     def _frame_bomb(self, text: Text, rng: Any) -> None:
         progress = min(1.0, self._tick / max(1, self.BOMB_TICKS))
-        total_height = 20
+        total_height = 22
         bomb_height = len(self.BOMB_LINES)
-        # Bomb drops from top to center
-        bomb_y = int(progress * (total_height // 2))
+        bomb_y = int(progress * (total_height // 2 - bomb_height // 2))
 
-        # Draw blank lines, then bomb, then logo
         for row in range(total_height):
             if bomb_y <= row < bomb_y + bomb_height:
                 bline = self.BOMB_LINES[row - bomb_y]
-                text.append(bline, style=Style(color="#ef4444", bold=True))
+                glow = "#ff6b6b" if self._tick % 3 == 0 else "#ef4444"
+                text.append(f"          {bline}", style=Style(color=glow, bold=True))
             elif row >= total_height - len(self.BANNER_LINES):
                 brow = row - (total_height - len(self.BANNER_LINES))
                 line = self.BANNER_LINES[brow]
-                # Logo shakes as bomb approaches
-                if progress > 0.5:
-                    shake = rng.choice([-2, -1, 0, 1, 2])  # noqa: S311
+                if progress > 0.4:
+                    shake = rng.choice([-3, -2, -1, 0, 1, 2, 3])  # noqa: S311
                     if shake > 0:
                         line = " " * shake + line
                     elif shake < 0:
                         line = line[abs(shake):]
-                dim = max(0.2, 1.0 - progress * 0.8)
+                dim = max(0.15, 1.0 - progress * 0.85)
                 r, g, b = int(168 * dim), int(85 * dim), int(247 * dim)
                 text.append(line, style=Style(color=f"#{r:02x}{g:02x}{b:02x}"))
             text.append("\n")
 
-        # Warning text
-        if progress > 0.3:
-            warn_chars = "⚠ INCOMING ⚠"
+        if progress > 0.25:
+            warn_chars = "⚠  INCOMING  ⚠"
             blink = self._tick % 4 < 2
-            if blink:
-                text.append(f"         {warn_chars}\n", style=Style(color="#ef4444", bold=True))
-            else:
-                text.append(f"         {warn_chars}\n", style=Style(color="#fbbf24", bold=True))
+            color = "#ef4444" if blink else "#fbbf24"
+            text.append(f"\n       {warn_chars}", style=Style(color=color, bold=True))
 
     def _frame_flash(self, text: Text) -> None:
-        # Bright flash — screen fills with block characters
         progress = self._tick / max(1, self.FLASH_TICKS)
-        if progress < 0.5:
-            # White flash
-            for _ in range(20):
-                text.append("█" * 50 + "\n", style=Style(color="#ffffff", bold=True))
+        if progress < 0.4:
+            ch, color = "█", "#ffffff"
+        elif progress < 0.7:
+            ch, color = "▓", self.PRIMARY
         else:
-            # Purple flash fading
-            for _ in range(20):
-                text.append("▓" * 50 + "\n", style=Style(color=self.PRIMARY))
+            ch, color = "▒", self.ACCENT
 
+        for _ in range(22):
+            text.append(ch * 55 + "\n", style=Style(color=color, bold=True))
         text.append("\n")
-        text.append("          ████  BOOM  ████\n", style=Style(color="#ef4444", bold=True))
+        text.append("        ████  B O O M  ████\n", style=Style(color="#ef4444", bold=True))
 
     def _frame_explode(self, text: Text, rng: Any) -> None:
         progress = self._tick / max(1, self.EXPLODE_TICKS)
-        debris = "█▓▒░╔╗╚╝║═╬┼┤├┬┴●◆◈✦⬡⬢"
+        debris = "█▓▒░╔╗╚╝║═╬┼●◆✦⬡⬢*#@"
         colors = ["#a855f7", "#7c3aed", "#c084fc", "#ef4444", "#f97316", "#fbbf24", "#ffffff"]
 
-        # Scatter the logo characters
         for line in self.BANNER_LINES:
             out = Text()
             for ch in line:
@@ -294,11 +275,10 @@ class SplashScreen(Static):  # type: ignore[misc]
 
         text.append("\n")
 
-        # Particle rain
-        particle_density = max(0.05, 0.4 - progress * 0.35)
-        for _ in range(8):
+        particle_density = max(0.03, 0.45 - progress * 0.42)
+        for _ in range(10):
             line = Text()
-            for _ in range(50):
+            for _ in range(55):
                 if rng.random() < particle_density:  # noqa: S311
                     ch = rng.choice(debris)  # noqa: S311
                     c = rng.choice(colors)  # noqa: S311
@@ -308,9 +288,8 @@ class SplashScreen(Static):  # type: ignore[misc]
             text.append_text(line)
             text.append("\n")
 
-        # Fading "Ziro" text emerging
-        if progress > 0.5:
-            emerge = min(1.0, (progress - 0.5) * 2)
+        if progress > 0.4:
+            emerge = min(1.0, (progress - 0.4) / 0.6)
             r = int(168 * emerge)
             g = int(85 * emerge)
             b = int(247 * emerge)
@@ -318,7 +297,7 @@ class SplashScreen(Static):  # type: ignore[misc]
             text.append(f" v{self._version}\n", style=Style(dim=True))
 
     def _frame_done(self, text: Text) -> None:
-        text.append("\n\n\n\n\n\n\n")
+        text.append("\n\n\n\n\n\n\n\n")
         text.append("         ⚡ ", style=Style(color=self.PRIMARY))
         text.append("Ziro", style=Style(color=self.PRIMARY, bold=True))
         text.append(f" v{self._version}", style=Style(dim=True))
