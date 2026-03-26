@@ -169,7 +169,7 @@ class TerminalRenderer(BaseToolRenderer):
             text.append(" ")
             text.append_text(cls._format_command(command))
         else:
-            text.append("$", style="#22c55e")
+            text.append("$", style="#a855f7")
             text.append(" ")
             text.append_text(cls._format_command(command))
 

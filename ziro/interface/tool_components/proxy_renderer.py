@@ -26,7 +26,7 @@ def _status_style(code: int | None) -> str:
     if code is None:
         return "dim"
     if 200 <= code < 300:
-        return "#22c55e"  # green
+        return "#a855f7"  # green
     if 300 <= code < 400:
         return "#eab308"  # yellow
     if 400 <= code < 500:
@@ -160,7 +160,7 @@ class ViewRequestRenderer(BaseToolRenderer):
 
                         if before:
                             text.append(f"...{before}", style="dim")
-                        text.append(match_text, style="#22c55e bold")
+                        text.append(match_text, style="#a855f7 bold")
                         if after:
                             text.append(f"{after}...", style="dim")
 
@@ -247,7 +247,7 @@ class SendRequestRenderer(BaseToolRenderer):
                 time_ms = result.get("response_time_ms")
 
                 text.append("\n")
-                text.append("  << ", style="#22c55e")
+                text.append("  << ", style="#a855f7")
                 if code:
                     text.append(f"{code}", style=_status_style(code))
                 if time_ms:
@@ -258,7 +258,7 @@ class SendRequestRenderer(BaseToolRenderer):
                     lines = body.split("\n")[:6]
                     for line in lines:
                         text.append("\n")
-                        text.append("  << ", style="#22c55e")
+                        text.append("  << ", style="#a855f7")
                         text.append(_truncate(line, MAX_LINE_LENGTH - 5), style="dim")
 
                     if len(body.split("\n")) > 6:
@@ -349,7 +349,7 @@ class RepeatRequestRenderer(BaseToolRenderer):
                     text.append(_truncate(url, 180), style="dim")
 
                 text.append("\n")
-                text.append("  << ", style="#22c55e")
+                text.append("  << ", style="#a855f7")
                 if code:
                     text.append(f"{code}", style=_status_style(code))
                 if time_ms:
@@ -360,7 +360,7 @@ class RepeatRequestRenderer(BaseToolRenderer):
                     lines = body.split("\n")[:5]
                     for line in lines:
                         text.append("\n")
-                        text.append("  << ", style="#22c55e")
+                        text.append("  << ", style="#a855f7")
                         text.append(_truncate(line, MAX_LINE_LENGTH - 5), style="dim")
 
                     if len(body.split("\n")) > 5:
@@ -432,7 +432,7 @@ class ScopeRulesRenderer(BaseToolRenderer):
                         name = scope.get("name", "?")
                         allow = scope.get("allowlist") or []
                         text.append("  ")
-                        text.append(_truncate(str(name), 40), style="#22c55e")
+                        text.append(_truncate(str(name), 40), style="#a855f7")
                         if allow and isinstance(allow, list):
                             allow_str = ", ".join(_truncate(str(a), 30) for a in allow[:3])
                             text.append(f"  {allow_str}", style="dim")
@@ -455,7 +455,7 @@ class ScopeRulesRenderer(BaseToolRenderer):
                         text.append(f"\n  deny: {deny_str}", style="dim")
 
             elif "message" in result:
-                text.append(f"  {result['message']}", style="#22c55e")
+                text.append(f"  {result['message']}", style="#a855f7")
 
         css_classes = cls.get_css_classes(status)
         return Static(text, classes=css_classes)
@@ -513,7 +513,7 @@ class ListSitemapRenderer(BaseToolRenderer):
                         kind_style = {
                             "DOMAIN": "#f59e0b",
                             "DIRECTORY": "#3b82f6",
-                            "REQUEST": "#22c55e",
+                            "REQUEST": "#a855f7",
                         }.get(kind, "dim")
 
                         text.append("  ")

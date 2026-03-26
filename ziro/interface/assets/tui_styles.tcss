@@ -4,7 +4,7 @@ Screen {
 }
 
 .screen--selection {
-    background: #2d3d2f;
+    background: #2d1f3d;
     color: #e5e5e5;
 }
 
@@ -18,18 +18,18 @@ ToastRack {
 Toast {
     width: 25;
     background: #000000;
-    border-left: outer #22c55e;
+    border-left: outer #a855f7;
 }
 
 Toast.-information .toast--title {
-    color: #22c55e;
+    color: #a855f7;
 }
 
 #splash_screen {
     height: 100%;
     width: 100%;
     background: #000000;
-    color: #22c55e;
+    color: #a855f7;
     align: center middle;
     content-align: center middle;
     text-align: center;
@@ -194,7 +194,7 @@ VulnerabilityDetailScreen {
 
 #copy_vuln_detail:hover, #copy_vuln_detail:focus {
     background: transparent;
-    color: #22c55e;
+    color: #a855f7;
     border: none;
 }
 
@@ -272,11 +272,11 @@ VulnerabilityDetailScreen {
 }
 
 #chat_input_container:focus-within {
-    border: round #22c55e;
+    border: round #a855f7;
 }
 
 #chat_input_container:focus-within #chat_prompt {
-    color: #22c55e;
+    color: #a855f7;
     text-style: bold;
 }
 
@@ -289,7 +289,7 @@ VulnerabilityDetailScreen {
 }
 
 #chat_history:focus {
-    border: round #22c55e;
+    border: round #a855f7;
 }
 
 #chat_input {
@@ -320,8 +320,8 @@ VulnerabilityDetailScreen {
 }
 
 #chat_input > .text-area--cursor {
-    color: #22c55e;
-    background: #22c55e;
+    color: #a855f7;
+    background: #a855f7;
 }
 
 .chat-placeholder {
@@ -351,7 +351,7 @@ VulnerabilityDetailScreen {
 
 .user-message {
     color: #e5e5e5;
-    border-left: thick #3b82f6;
+    border-left: thick #7c3aed;
     padding-left: 1;
     margin-bottom: 1;
 }
@@ -667,12 +667,12 @@ HelpScreen {
     padding: 1 2;
     width: 40;
     height: auto;
-    border: round #22c55e;
+    border: round #a855f7;
     background: #000000 98%;
 }
 
 #help_title {
-    color: #22c55e;
+    color: #a855f7;
     text-style: bold;
     text-align: center;
     width: 100%;

@@ -235,7 +235,7 @@ def _build_vulnerability_stats(stats_text: Text, tracer: Any) -> None:
         stats_text.append(")", style="dim white")
         stats_text.append("\n")
     else:
-        stats_text.append("Vulnerabilities  ", style="bold #22c55e")
+        stats_text.append("Vulnerabilities  ", style="bold #a855f7")
         stats_text.append("0", style="bold white")
         stats_text.append(" (No exploitable vulnerabilities detected)", style="dim green")
         stats_text.append("\n")

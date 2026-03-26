@@ -27,7 +27,7 @@ class BaseToolRenderer(ABC):
     def status_icon(cls, status: str) -> tuple[str, str]:
         icons = {
             "running": ("● In progress...", "#f59e0b"),
-            "completed": ("✓ Done", "#22c55e"),
+            "completed": ("✓ Done", "#a855f7"),
             "failed": ("✗ Failed", "#dc2626"),
             "error": ("✗ Error", "#dc2626"),
         }

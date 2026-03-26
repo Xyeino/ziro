@@ -412,7 +412,7 @@ def display_completion_message(args: argparse.Namespace, results_path: Path) -> 
 
     completion_text = Text()
     if scan_completed:
-        completion_text.append("Penetration test completed", style="bold #22c55e")
+        completion_text.append("Penetration test completed", style="bold #a855f7")
     else:
         completion_text.append("SESSION ENDED", style="bold #eab308")
 
@@ -443,7 +443,7 @@ def display_completion_message(args: argparse.Namespace, results_path: Path) -> 
 
     panel_content = Text.assemble(*panel_parts)
 
-    border_style = "#22c55e" if scan_completed else "#eab308"
+    border_style = "#a855f7" if scan_completed else "#eab308"
 
     panel = Panel(
         panel_content,
@@ -499,7 +499,7 @@ def pull_docker_image() -> None:
             sys.exit(1)
 
     success_text = Text()
-    success_text.append("Docker image ready", style="#22c55e")
+    success_text.append("Docker image ready", style="#a855f7")
     console.print(success_text)
     console.print()
 

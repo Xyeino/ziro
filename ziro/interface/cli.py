@@ -24,7 +24,7 @@ async def run_cli(args: Any) -> None:  # noqa: PLR0915
     console = Console()
 
     start_text = Text()
-    start_text.append("Penetration test initiated", style="bold #22c55e")
+    start_text.append("Penetration test initiated", style="bold #a855f7")
 
     target_text = Text()
     target_text.append("Target", style="dim")
@@ -57,7 +57,7 @@ async def run_cli(args: Any) -> None:  # noqa: PLR0915
         ),
         title="[bold white]ZIRO",
         title_align="left",
-        border_style="#22c55e",
+        border_style="#a855f7",
         padding=(1, 2),
     )
 
@@ -124,7 +124,7 @@ async def run_cli(args: Any) -> None:  # noqa: PLR0915
 
     def create_live_status() -> Panel:
         status_text = Text()
-        status_text.append("Penetration test in progress", style="bold #22c55e")
+        status_text.append("Penetration test in progress", style="bold #a855f7")
         status_text.append("\n\n")
 
         stats_text = build_live_stats_text(tracer, agent_config)
@@ -135,7 +135,7 @@ async def run_cli(args: Any) -> None:  # noqa: PLR0915
             status_text,
             title="[bold white]ZIRO",
             title_align="left",
-            border_style="#22c55e",
+            border_style="#a855f7",
             padding=(1, 2),
         )
 
