@@ -91,9 +91,9 @@ RUN nuclei -update-templates
 RUN pipx install arjun && \
     pipx install dirsearch && \
     pipx inject dirsearch setuptools && \
-    pipx install wafw00f && \
-    pipx install theHarvester && \
-    pipx install commix
+    pipx install wafw00f
+
+RUN pip install --break-system-packages theHarvester commix
 
 ENV NPM_CONFIG_PREFIX=/home/pentester/.npm-global
 RUN mkdir -p /home/pentester/.npm-global
@@ -125,8 +125,6 @@ RUN curl -sL https://raw.githubusercontent.com/epi052/feroxbuster/main/install-n
 
 USER pentester
 
-# PayloadsAllTheThings (payload database for manual testing)
-RUN git clone --depth 1 https://github.com/swisskyrepo/PayloadsAllTheThings.git /home/pentester/wordlists/PayloadsAllTheThings
 
 RUN pipx install semgrep && \
     pipx install bandit
