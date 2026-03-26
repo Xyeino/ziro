@@ -34,9 +34,9 @@ RUN apt-get update && \
     jq parallel ripgrep grep \
     less man-db procps htop \
     iproute2 iputils-ping netcat-traditional \
-    nmap ncat ndiff \
-    sqlmap nuclei subfinder naabu ffuf \
-    nodejs npm pipx \
+    nmap ncat ndiff masscan nikto hydra \
+    sqlmap nuclei subfinder naabu ffuf amass \
+    nodejs npm pipx traceroute \
     libcap2-bin \
     gdb \
     tmux \
@@ -83,14 +83,17 @@ RUN go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest && \
     go install -v github.com/projectdiscovery/katana/cmd/katana@latest && \
     go install -v github.com/projectdiscovery/cvemap/cmd/vulnx@latest && \
     go install -v github.com/jaeles-project/gospider@latest && \
-    go install -v github.com/projectdiscovery/interactsh/cmd/interactsh-client@latest
+    go install -v github.com/projectdiscovery/interactsh/cmd/interactsh-client@latest && \
+    go install -v github.com/hahwul/dalfox/v2@latest
 
 RUN nuclei -update-templates
 
 RUN pipx install arjun && \
     pipx install dirsearch && \
     pipx inject dirsearch setuptools && \
-    pipx install wafw00f
+    pipx install wafw00f && \
+    pipx install theHarvester && \
+    pipx install commix
 
 ENV NPM_CONFIG_PREFIX=/home/pentester/.npm-global
 RUN mkdir -p /home/pentester/.npm-global
@@ -117,7 +120,13 @@ RUN curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/
 
 RUN apt-get install -y wapiti
 
+# Feroxbuster (fast Rust content discovery)
+RUN curl -sL https://raw.githubusercontent.com/epi052/feroxbuster/main/install-nix.sh | bash -s /usr/local/bin
+
 USER pentester
+
+# PayloadsAllTheThings (payload database for manual testing)
+RUN git clone --depth 1 https://github.com/swisskyrepo/PayloadsAllTheThings.git /home/pentester/wordlists/PayloadsAllTheThings
 
 RUN pipx install semgrep && \
     pipx install bandit
