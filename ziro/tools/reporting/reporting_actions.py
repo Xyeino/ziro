@@ -130,6 +130,51 @@ def _validate_cwe(cwe: str) -> str | None:
     return None
 
 
+_BIS_FIELDS = ("data_sensitivity", "blast_radius", "exploitability", "compliance", "revenue")
+_BIS_WEIGHTS = (0.30, 0.25, 0.20, 0.15, 0.10)
+
+
+def _parse_business_impact(xml_str: str) -> dict[str, Any] | None:
+    """Parse business impact XML and calculate weighted score."""
+    if not xml_str or not xml_str.strip():
+        return None
+    scores: dict[str, int] = {}
+    for field in _BIS_FIELDS:
+        match = re.search(rf"<{field}>(.*?)</{field}>", xml_str, re.DOTALL)
+        if match:
+            with contextlib.suppress(ValueError):
+                val = int(match.group(1).strip())
+                if 1 <= val <= 5:
+                    scores[field] = val
+    if not scores:
+        return None
+
+    weighted = sum(
+        scores.get(f, 3) * w for f, w in zip(_BIS_FIELDS, _BIS_WEIGHTS, strict=False)
+    )
+    score = round(weighted, 1)
+
+    if score >= 4.0:
+        risk_level = "CRITICAL"
+    elif score >= 3.0:
+        risk_level = "HIGH"
+    elif score >= 2.0:
+        risk_level = "MEDIUM"
+    else:
+        risk_level = "LOW"
+
+    # Extract reasoning if present
+    reasoning_match = re.search(r"<reasoning>(.*?)</reasoning>", xml_str, re.DOTALL)
+    reasoning = reasoning_match.group(1).strip() if reasoning_match else None
+
+    return {
+        "scores": scores,
+        "score": score,
+        "risk_level": risk_level,
+        "reasoning": reasoning,
+    }
+
+
 def calculate_cvss_and_severity(
     attack_vector: str,
     attack_complexity: str,
@@ -229,6 +274,8 @@ def create_vulnerability_report(  # noqa: PLR0912
     cve: str | None = None,
     cwe: str | None = None,
     code_locations: str | None = None,
+    business_impact: str | None = None,
+    test_id: str | None = None,
 ) -> dict[str, Any]:
     validation_errors = _validate_required_fields(
         title=title,
@@ -279,6 +326,8 @@ def create_vulnerability_report(  # noqa: PLR0912
         cwe_err = _validate_cwe(cwe)
         if cwe_err:
             validation_errors.append(cwe_err)
+
+    parsed_business_impact = _parse_business_impact(business_impact) if business_impact else None
 
     if validation_errors:
         return {"success": False, "message": "Validation failed", "errors": validation_errors}
@@ -347,15 +396,22 @@ def create_vulnerability_report(  # noqa: PLR0912
                 cve=cve,
                 cwe=cwe,
                 code_locations=parsed_locations,
+                business_impact=parsed_business_impact,
+                test_id=test_id,
             )
 
-            result = {
+            result: dict[str, Any] = {
                 "success": True,
                 "message": f"Vulnerability report '{title}' created successfully",
                 "report_id": report_id,
                 "severity": severity,
                 "cvss_score": cvss_score,
             }
+            if parsed_business_impact:
+                result["business_impact_score"] = parsed_business_impact["score"]
+                result["business_risk_level"] = parsed_business_impact["risk_level"]
+            if test_id:
+                result["test_id"] = test_id
             if blackbox_warning:
                 result["warning"] = blackbox_warning
             return result

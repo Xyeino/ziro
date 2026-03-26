@@ -494,6 +494,22 @@ class VulnerabilityDetailScreen(ModalScreen):  # type: ignore[misc]
             cvss_color = self._get_cvss_color(float(cvss_score))
             text.append(str(cvss_score), style=f"bold {cvss_color}")
 
+        bis = vuln.get("business_impact")
+        if bis:
+            text.append("\n\n")
+            text.append("Business Impact: ", style=self.FIELD_STYLE)
+            bis_score = bis.get("score", 0)
+            bis_level = bis.get("risk_level", "UNKNOWN")
+            bis_color = self.SEVERITY_COLORS.get(bis_level.lower(), "#6b7280")
+            text.append(f"{bis_score} ", style=f"bold {bis_color}")
+            text.append(f"({bis_level})", style=f"{bis_color}")
+
+        test_id = vuln.get("test_id", "")
+        if test_id:
+            text.append("\n\n")
+            text.append("Test Case: ", style=self.FIELD_STYLE)
+            text.append(test_id)
+
         target = vuln.get("target", "")
         if target:
             text.append("\n\n")

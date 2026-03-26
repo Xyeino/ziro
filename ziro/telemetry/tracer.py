@@ -342,6 +342,8 @@ class Tracer:
         cve: str | None = None,
         cwe: str | None = None,
         code_locations: list[dict[str, Any]] | None = None,
+        business_impact: dict[str, Any] | None = None,
+        test_id: str | None = None,
     ) -> str:
         # Dedup check
         try:
@@ -401,6 +403,10 @@ class Tracer:
             report["cwe"] = cwe.strip()
         if code_locations:
             report["code_locations"] = code_locations
+        if business_impact:
+            report["business_impact"] = business_impact
+        if test_id:
+            report["test_id"] = test_id
 
         self.vulnerability_reports.append(report)
         logger.info(f"Added vulnerability report: {report_id} - {title}")
@@ -736,6 +742,30 @@ class Tracer:
                                     f.write(f"+ {line}\n")
                             f.write("```\n")
                         f.write("\n")
+
+                bis = report.get("business_impact")
+                if bis:
+                    f.write("## Business Impact\n\n")
+                    f.write(f"**Score:** {bis['score']} — **{bis['risk_level']}** BUSINESS RISK\n\n")
+                    scores = bis.get("scores", {})
+                    if scores:
+                        f.write("| Dimension | Score |\n|-----------|-------|\n")
+                        labels = {
+                            "data_sensitivity": "Data Sensitivity",
+                            "blast_radius": "Blast Radius",
+                            "exploitability": "Exploitability",
+                            "compliance": "Compliance",
+                            "revenue": "Revenue & Reputation",
+                        }
+                        for key, label in labels.items():
+                            if key in scores:
+                                f.write(f"| {label} | {scores[key]}/5 |\n")
+                        f.write("\n")
+                    if bis.get("reasoning"):
+                        f.write(f"{bis['reasoning']}\n\n")
+
+                if report.get("test_id"):
+                    f.write(f"**Test Case:** {report['test_id']}\n\n")
 
                 if report.get("remediation_steps"):
                     f.write("## Remediation\n\n")

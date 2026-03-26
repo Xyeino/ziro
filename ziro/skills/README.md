@@ -35,6 +35,7 @@ The skills are dynamically injected into the agent's system prompt, allowing it 
 | **`/protocols`** | Protocol-specific testing patterns for GraphQL, WebSocket, OAuth, and other communication standards |
 | **`/tooling`** | Command-line playbooks for core sandbox tools (nmap, nuclei, httpx, ffuf, subfinder, naabu, katana, sqlmap) |
 | **`/cloud`** | Cloud provider security testing for AWS, Azure, GCP, and Kubernetes environments |
+| **`/analysis`** | Business impact scoring, security test case generation, and structured assessment methodologies |
 | **`/reconnaissance`** | Advanced information gathering and enumeration techniques for comprehensive attack surface mapping |
 | **`/custom`** | Community-contributed skills for specialized or industry-specific testing scenarios |
 
