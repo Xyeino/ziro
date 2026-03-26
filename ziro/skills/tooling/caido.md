@@ -65,3 +65,22 @@ Failure recovery:
 - If API queries fail, verify Caido is running and check `--api-port`.
 - If TLS interception fails, ensure the Caido CA certificate is installed/trusted.
 - If upstream proxy fails, verify the upstream is reachable before chaining.
+
+## 2025-2026 Features
+Caido has evolved significantly:
+- **HTTPQL for Intercept**: Filter noise in intercepted traffic using query language
+- **WebSocket Support**: Full WS interception and replay
+- **Invisible Proxying & DNS Overrides**: Test without proxy-aware clients
+- **Match & Replace Redesign**: More powerful request/response modification
+
+## AI Integration (Shift Plugin)
+Caido acquired the Shift plugin in 2025, integrating agentic AI:
+- Context-aware AI agents within Caido for security testing
+- Caido SDK client gives AI agents full control over Caido capabilities
+- Use for automated analysis of intercepted traffic
+
+## Plugin Ecosystem
+36+ community plugins from 19 authors:
+- Automate repetitive testing tasks
+- Custom workflows and integrations
+- Extend Caido's core functionality

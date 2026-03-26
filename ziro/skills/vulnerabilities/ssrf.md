@@ -3,6 +3,8 @@ name: ssrf
 description: SSRF testing for cloud metadata access, internal service discovery, and protocol smuggling
 ---
 
+> **OWASP 2025 Update**: SSRF has been consolidated into A01:2025 Broken Access Control, reflecting its role as an access control bypass vector. This elevates SSRF testing priority in all engagements.
+
 # SSRF
 
 Server-Side Request Forgery enables the server to reach networks and services the attacker cannot. Focus on cloud metadata endpoints, service meshes, Kubernetes, and protocol abuse to turn a single fetch into credentials, lateral movement, and sometimes RCE.
@@ -179,3 +181,12 @@ Server-Side Request Forgery enables the server to reach networks and services th
 ## Summary
 
 Any feature that fetches remote content on behalf of a user is a potential tunnel to internal networks and control planes. Bind scheme/host/port/headers explicitly or expect an attacker to route through them.
+
+## Cloud Metadata Endpoints (Critical)
+- AWS IMDSv1: `http://169.254.169.254/latest/meta-data/` (most common target)
+- AWS IMDSv2: Requires token header - `curl -H "X-aws-ec2-metadata-token: TOKEN" http://169.254.169.254/`
+- GCP: `http://metadata.google.internal/computeMetadata/v1/` (requires Metadata-Flavor: Google header)
+- Azure: `http://169.254.169.254/metadata/instance?api-version=2021-02-01` (requires Metadata: true header)
+- DigitalOcean: `http://169.254.169.254/metadata/v1/`
+- Always test IMDSv1 first as many AWS instances still allow it
+- Bypass filters: decimal IP (2852039166), hex (0xA9FEA9FE), IPv6 (::ffff:169.254.169.254), DNS rebinding

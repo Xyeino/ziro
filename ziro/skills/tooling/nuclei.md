@@ -65,3 +65,20 @@ Failure recovery:
 
 If uncertain, query web_search with:
 `site:docs.projectdiscovery.io nuclei <flag> running`
+
+## CISA KEV Scanning (2025+)
+Nuclei now includes 1496+ templates for Known Exploited Vulnerabilities from CISA's catalog.
+- Scan for all KEV: `nuclei -tags kev,vkev -u <target>`
+- Combined with severity: `nuclei -tags kev -severity critical,high -u <target>`
+- This should be a PRIORITY scan in any engagement as these are actively exploited in the wild.
+
+## AI-Generated Templates
+ProjectDiscovery maintains nuclei-templates-ai repository with AI-generated templates.
+- These supplement the community templates
+- Use: `nuclei -t ~/nuclei-templates-ai/ -u <target>`
+- Useful for covering newly disclosed CVEs before community templates are available.
+
+## November 2025 Updates
+- v10.3.2 & v10.3.4 added 197 new templates and 83 CVE coverage
+- 19 actively exploited KEVs added
+- Notable: CVE-2025-55182 (React Server Components RCE), CVE-2025-49844 (Redis sandbox escape)
