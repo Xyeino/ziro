@@ -8,6 +8,7 @@ import asyncio
 import logging
 import shutil
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -15,6 +16,7 @@ import litellm
 from docker.errors import DockerException
 from rich.console import Console
 from rich.panel import Panel
+from rich.table import Table
 from rich.text import Text
 
 from ziro.config import Config, apply_saved_config, save_current_config
@@ -181,15 +183,47 @@ def validate_environment() -> None:  # noqa: PLR0912, PLR0915
 
 
 def check_docker_installed() -> None:
+    console = Console()
+
     if shutil.which("docker") is None:
-        console = Console()
         error_text = Text()
-        error_text.append("DOCKER NOT INSTALLED", style="bold red")
-        error_text.append("\n\n", style="white")
-        error_text.append("The 'docker' CLI was not found in your PATH.\n", style="white")
-        error_text.append(
-            "Please install Docker and ensure the 'docker' command is available.\n\n", style="white"
+        error_text.append("DOCKER NOT FOUND\n\n", style="bold red")
+        error_text.append("Ziro needs Docker to run its security sandbox.\n\n", style="white")
+        error_text.append("Install Docker:\n", style="bold white")
+        error_text.append("  Ubuntu/Debian  ", style="dim")
+        error_text.append("curl -fsSL https://get.docker.com | sh\n", style="#a855f7")
+        error_text.append("  macOS          ", style="dim")
+        error_text.append("brew install --cask docker\n", style="#a855f7")
+        error_text.append("  Other          ", style="dim")
+        error_text.append("https://docs.docker.com/get-docker/", style="#60a5fa")
+
+        panel = Panel(
+            error_text,
+            title="[bold white]ZIRO",
+            title_align="left",
+            border_style="red",
+            padding=(1, 2),
         )
+        console.print("\n", panel, "\n")
+        sys.exit(1)
+
+    # Check if Docker daemon is running
+    import subprocess
+
+    result = subprocess.run(  # noqa: S603, S607
+        ["docker", "info"],
+        capture_output=True,
+        timeout=10,
+    )
+    if result.returncode != 0:
+        error_text = Text()
+        error_text.append("DOCKER NOT RUNNING\n\n", style="bold red")
+        error_text.append("Docker is installed but the daemon is not running.\n\n", style="white")
+        error_text.append("Start Docker:\n", style="bold white")
+        error_text.append("  Linux   ", style="dim")
+        error_text.append("sudo systemctl start docker\n", style="#a855f7")
+        error_text.append("  macOS   ", style="dim")
+        error_text.append("open -a Docker", style="#a855f7")
 
         panel = Panel(
             error_text,
@@ -232,12 +266,35 @@ async def warm_up_llm() -> None:
         validate_llm_response(response)
 
     except Exception as e:  # noqa: BLE001
+        error_str = str(e).lower()
         error_text = Text()
-        error_text.append("LLM CONNECTION FAILED", style="bold red")
-        error_text.append("\n\n", style="white")
-        error_text.append("Could not establish connection to the language model.\n", style="white")
-        error_text.append("Please check your configuration and try again.\n", style="white")
-        error_text.append(f"\nError: {e}", style="dim white")
+        error_text.append("LLM CONNECTION FAILED\n\n", style="bold red")
+
+        # Detect specific error types and give actionable advice
+        if "401" in error_str or "unauthorized" in error_str or "invalid api key" in error_str:
+            error_text.append("Invalid API key. ", style="bold yellow")
+            error_text.append("Check that LLM_API_KEY is correct.\n", style="white")
+            error_text.append(f"  Current model: {Config.get('ziro_llm')}\n", style="dim")
+        elif "404" in error_str or "not found" in error_str:
+            error_text.append("Model not found. ", style="bold yellow")
+            model = Config.get("ziro_llm")
+            error_text.append(f'Check that ZIRO_LLM="{model}" is a valid model name.\n', style="white")
+        elif "timeout" in error_str or "timed out" in error_str:
+            error_text.append("Connection timed out. ", style="bold yellow")
+            error_text.append("The LLM provider is not responding.\n", style="white")
+            error_text.append("  - Check your internet connection\n", style="dim")
+            error_text.append("  - If using local model, ensure it's running\n", style="dim")
+        elif "connection" in error_str or "refused" in error_str:
+            error_text.append("Cannot reach LLM provider. ", style="bold yellow")
+            api_base = Config.get("llm_api_base") or Config.get("ollama_api_base")
+            if api_base:
+                error_text.append(f"  Endpoint: {api_base}\n", style="dim")
+            error_text.append("  - Check that the server is running\n", style="dim")
+            error_text.append("  - Verify LLM_API_BASE is correct\n", style="dim")
+        else:
+            error_text.append("Could not connect to the language model.\n", style="white")
+
+        error_text.append(f"\nError: {e}", style="dim")
 
         panel = Panel(
             error_text,
@@ -260,6 +317,41 @@ def get_version() -> str:
         return version("ziro-agent")
     except Exception:  # noqa: BLE001
         return "unknown"
+
+
+def check_for_updates() -> None:
+    """Check GitHub for newer version, non-blocking."""
+    try:
+        import requests
+
+        current = get_version()
+        if current == "unknown":
+            return
+
+        resp = requests.get(
+            "https://api.github.com/repos/Xyeino/ziro/releases/latest",
+            timeout=3,
+        )
+        if resp.status_code != 200:
+            return
+
+        latest = resp.json().get("tag_name", "").lstrip("v")
+        if not latest:
+            return
+
+        from packaging.version import Version
+
+        if Version(latest) > Version(current):
+            console = Console()
+            console.print(
+                f"  [dim]Update available:[/] [bold #a855f7]v{latest}[/] "
+                f"[dim](current: v{current})[/]"
+            )
+            console.print(
+                "  [dim]Run:[/] pip install --upgrade git+https://github.com/Xyeino/ziro.git\n"
+            )
+    except Exception:  # noqa: BLE001
+        pass
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -402,7 +494,31 @@ Examples:
     return args
 
 
-def display_completion_message(args: argparse.Namespace, results_path: Path) -> None:
+def _format_duration(seconds: float) -> str:
+    """Format seconds into human-readable duration."""
+    m, s = divmod(int(seconds), 60)
+    h, m = divmod(m, 60)
+    if h > 0:
+        return f"{h}h {m}m {s}s"
+    if m > 0:
+        return f"{m}m {s}s"
+    return f"{s}s"
+
+
+def _get_severity_color(severity: str) -> str:
+    colors = {
+        "critical": "#dc2626",
+        "high": "#ea580c",
+        "medium": "#d97706",
+        "low": "#22c55e",
+        "info": "#3b82f6",
+    }
+    return colors.get(severity.lower(), "#6b7280")
+
+
+def display_completion_message(
+    args: argparse.Namespace, results_path: Path, scan_duration: float = 0.0
+) -> None:
     console = Console()
     tracer = get_global_tracer()
 
@@ -410,38 +526,80 @@ def display_completion_message(args: argparse.Namespace, results_path: Path) -> 
     if tracer and tracer.scan_results:
         scan_completed = tracer.scan_results.get("scan_completed", False)
 
-    completion_text = Text()
+    # --- Header ---
     if scan_completed:
-        completion_text.append("Penetration test completed", style="bold #a855f7")
+        header = Text("SCAN COMPLETE", style="bold #a855f7")
     else:
-        completion_text.append("SESSION ENDED", style="bold #eab308")
+        header = Text("SESSION ENDED", style="bold #eab308")
 
+    # --- Target ---
     target_text = Text()
-    target_text.append("Target", style="dim")
-    target_text.append("  ")
+    target_text.append("Target  ", style="dim")
     if len(args.targets_info) == 1:
         target_text.append(args.targets_info[0]["original"], style="bold white")
     else:
         target_text.append(f"{len(args.targets_info)} targets", style="bold white")
-        for target_info in args.targets_info:
-            target_text.append("\n        ")
-            target_text.append(target_info["original"], style="white")
 
-    stats_text = build_final_stats_text(tracer)
+    # --- Vulnerability summary table ---
+    vuln_text = Text()
+    if tracer and tracer.vulnerability_reports:
+        vulns = tracer.vulnerability_reports
+        severity_counts: dict[str, int] = {}
+        for v in vulns:
+            sev = v.get("severity", "info").lower()
+            severity_counts[sev] = severity_counts.get(sev, 0) + 1
 
-    panel_parts = [completion_text, "\n\n", target_text]
+        vuln_text.append(f"\nFound  ", style="dim")
+        vuln_text.append(f"{len(vulns)}", style="bold white")
+        vuln_text.append(" vulnerabilities  ", style="dim")
 
-    if stats_text.plain:
-        panel_parts.extend(["\n", stats_text])
+        parts = []
+        for sev in ["critical", "high", "medium", "low", "info"]:
+            count = severity_counts.get(sev, 0)
+            if count > 0:
+                parts.append((f"{count} {sev.upper()}", _get_severity_color(sev)))
 
-    results_text = Text()
-    results_text.append("\n")
-    results_text.append("Output", style="dim")
-    results_text.append("  ")
-    results_text.append(str(results_path), style="#60a5fa")
-    panel_parts.extend(["\n", results_text])
+        for i, (label, color) in enumerate(parts):
+            if i > 0:
+                vuln_text.append(" · ", style="dim")
+            vuln_text.append(label, style=f"bold {color}")
+    else:
+        vuln_text.append("\nFound  ", style="dim")
+        vuln_text.append("0", style="bold white")
+        vuln_text.append(" vulnerabilities", style="dim")
 
-    panel_content = Text.assemble(*panel_parts)
+    # --- Stats line ---
+    stats_line = Text()
+    if tracer:
+        agent_count = len(tracer.agents)
+        tool_count = tracer.get_real_tool_count()
+        llm_stats = tracer.get_total_llm_stats()
+        total_tokens = llm_stats.get("total", {}).get("total_tokens", 0)
+
+        stats_line.append("\n")
+        stats_line.append("Agents ", style="dim")
+        stats_line.append(str(agent_count), style="white")
+        stats_line.append("  ·  ", style="dim")
+        stats_line.append("Tools ", style="dim")
+        stats_line.append(str(tool_count), style="white")
+        stats_line.append("  ·  ", style="dim")
+        stats_line.append("Tokens ", style="dim")
+        stats_line.append(f"{total_tokens:,}", style="white")
+
+        if scan_duration > 0:
+            stats_line.append("  ·  ", style="dim")
+            stats_line.append("Duration ", style="dim")
+            stats_line.append(_format_duration(scan_duration), style="white")
+
+    # --- Output path ---
+    output_text = Text()
+    output_text.append("\nOutput ", style="dim")
+    output_text.append(str(results_path), style="#60a5fa")
+
+    # --- Assemble panel ---
+    panel_content = Text.assemble(
+        header, "\n\n", target_text, vuln_text, stats_line, output_text
+    )
 
     border_style = "#a855f7" if scan_completed else "#eab308"
 
@@ -456,7 +614,7 @@ def display_completion_message(args: argparse.Namespace, results_path: Path) -> 
     console.print("\n")
     console.print(panel)
     console.print()
-    console.print("[#60a5fa]github.com/OkayunCrypto/ziro[/]")
+    console.print("[#60a5fa]github.com/Xyeino/ziro[/]")
     console.print()
 
 
@@ -523,6 +681,8 @@ def main() -> None:
     if args.config:
         apply_config_override(args.config)
 
+    check_for_updates()
+
     check_docker_installed()
     pull_docker_image()
 
@@ -530,6 +690,8 @@ def main() -> None:
     asyncio.run(warm_up_llm())
 
     persist_config()
+
+    _scan_start_time = time.monotonic()
 
     args.run_name = generate_run_name(args.targets_info)
 
@@ -569,8 +731,9 @@ def main() -> None:
         if tracer:
             posthog.end(tracer, exit_reason=exit_reason)
 
+    scan_duration = time.monotonic() - _scan_start_time
     results_path = Path("ziro_runs") / args.run_name
-    display_completion_message(args, results_path)
+    display_completion_message(args, results_path, scan_duration=scan_duration)
 
     if args.non_interactive:
         tracer = get_global_tracer()
