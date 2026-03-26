@@ -94,7 +94,7 @@ class StrReplaceEditorRenderer(BaseToolRenderer):
                 highlighted_new = cls._highlight_code(new_str, path)
                 for line in highlighted_new.plain.split("\n"):
                     text.append("\n")
-                    text.append("+", style="#22c55e")
+                    text.append("+", style="#a855f7")
                     text.append(" ")
                     text.append(line)
 
@@ -106,7 +106,7 @@ class StrReplaceEditorRenderer(BaseToolRenderer):
             highlighted_new = cls._highlight_code(new_str, path)
             for line in highlighted_new.plain.split("\n"):
                 text.append("\n")
-                text.append("+", style="#22c55e")
+                text.append("+", style="#a855f7")
                 text.append(" ")
                 text.append(line)
 

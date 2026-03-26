@@ -95,71 +95,156 @@ class ChatTextArea(TextArea):  # type: ignore[misc]
 
 class SplashScreen(Static):  # type: ignore[misc]
     ALLOW_SELECT = False
-    PRIMARY_GREEN = "#22c55e"
+    PRIMARY = "#a855f7"
+    ACCENT = "#7c3aed"
     BANNER = (
-        " ███████╗████████╗██████╗ ██╗██╗  ██╗\n"
-        " ██╔════╝╚══██╔══╝██╔══██╗██║╚██╗██╔╝\n"
-        " ███████╗   ██║   ██████╔╝██║ ╚███╔╝\n"
-        " ╚════██║   ██║   ██╔══██╗██║ ██╔██╗\n"
-        " ███████║   ██║   ██║  ██║██║██╔╝ ██╗\n"
-        " ╚══════╝   ╚═╝   ╚═╝  ╚═╝╚═╝╚═╝  ╚═╝"
+        " ███████╗██╗██████╗  ██████╗ \n"
+        " ╚══███╔╝██║██╔══██╗██╔═══██╗\n"
+        "   ███╔╝ ██║██████╔╝██║   ██║\n"
+        "  ███╔╝  ██║██╔══██╗██║   ██║\n"
+        " ███████╗██║██║  ██║╚██████╔╝\n"
+        " ╚══════╝╚═╝╚═╝  ╚═╝ ╚═════╝"
     )
+    BOMB = (
+        "  |,-'--|--'-.|  \n"
+        "  \\  |  |  |  /  \n"
+        "   `.|  |  |.'   \n"
+        "    |     |      \n"
+        "    |'._.'|      \n"
+        "    |.o '.|      \n"
+        "     \\ _ /       \n"
+        "      \\ /        \n"
+        "       '         "
+    )
+
+    # Animation phases: 0=logo, 1=bomb_falling, 2=explosion, 3=done
+    PHASE_LOGO = 0
+    PHASE_BOMB = 1
+    PHASE_EXPLODE = 2
+    PHASE_DONE = 3
+    LOGO_TICKS = 40       # ~2 seconds at 0.05s interval
+    BOMB_TICKS = 16       # ~0.8 seconds falling
+    EXPLODE_TICKS = 14    # ~0.7 seconds explosion
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
-        self._animation_step = 0
+        self._tick = 0
+        self._phase = self.PHASE_LOGO
         self._animation_timer: Timer | None = None
         self._panel_static: Static | None = None
         self._version = "dev"
+        self._explosion_chars = "█▓▒░╔╗╚╝║═╬┼ZIRO"
 
     def compose(self) -> ComposeResult:
         self._version = get_package_version()
-        self._animation_step = 0
-        start_line = self._build_start_line_text(self._animation_step)
-        panel = self._build_panel(start_line)
-
+        panel = self._build_frame()
         panel_static = Static(panel, id="splash_content")
         self._panel_static = panel_static
         yield panel_static
 
     def on_mount(self) -> None:
-        self._animation_timer = self.set_interval(0.05, self._animate_start_line)
+        self._animation_timer = self.set_interval(0.05, self._animate)
 
     def on_unmount(self) -> None:
         if self._animation_timer is not None:
             self._animation_timer.stop()
             self._animation_timer = None
 
-    def _animate_start_line(self) -> None:
+    def _animate(self) -> None:
         if not self._panel_static:
             return
+        self._tick += 1
 
-        self._animation_step += 1
-        start_line = self._build_start_line_text(self._animation_step)
-        panel = self._build_panel(start_line)
-        self._panel_static.update(panel)
+        if self._phase == self.PHASE_LOGO and self._tick >= self.LOGO_TICKS:
+            self._phase = self.PHASE_BOMB
+            self._tick = 0
+        elif self._phase == self.PHASE_BOMB and self._tick >= self.BOMB_TICKS:
+            self._phase = self.PHASE_EXPLODE
+            self._tick = 0
+        elif self._phase == self.PHASE_EXPLODE and self._tick >= self.EXPLODE_TICKS:
+            self._phase = self.PHASE_DONE
+            self._tick = 0
 
-    def _build_panel(self, start_line: Text) -> Panel:
+        self._panel_static.update(self._build_frame())
+
+    def _build_frame(self) -> Panel | Text:
+        import random
+
+        if self._phase == self.PHASE_LOGO:
+            return self._build_logo_panel()
+
+        if self._phase == self.PHASE_BOMB:
+            # Bomb falling over logo
+            progress = min(1.0, self._tick / max(1, self.BOMB_TICKS))
+            text = Text()
+            # blank lines to push bomb down
+            drop_lines = int(progress * 4)
+            for _ in range(drop_lines):
+                text.append("\n")
+            text.append(self.BOMB, style=Style(color="#ef4444", bold=True))
+            text.append("\n\n")
+            # Logo still visible but dimming
+            dim_level = 1.0 - progress * 0.7
+            dim_hex = f"#{int(168 * dim_level):02x}{int(85 * dim_level):02x}{int(247 * dim_level):02x}"
+            text.append(self.BANNER.strip("\n"), style=Style(color=dim_hex))
+            return Panel.fit(text, border_style=Style(color="#ef4444", dim=True), padding=(1, 4))
+
+        if self._phase == self.PHASE_EXPLODE:
+            # Explosion — random chars flying
+            progress = self._tick / max(1, self.EXPLODE_TICKS)
+            text = Text()
+            colors = ["#a855f7", "#7c3aed", "#c084fc", "#ef4444", "#f97316", "#fbbf24", "#ffffff"]
+            banner_chars = list(self.BANNER.strip("\n"))
+            for ch in banner_chars:
+                if ch in (" ", "\n"):
+                    text.append(ch)
+                elif random.random() < progress:  # noqa: S311
+                    text.append(" ")
+                else:
+                    replacement = random.choice(self._explosion_chars)  # noqa: S311
+                    color = random.choice(colors)  # noqa: S311
+                    text.append(replacement, style=Style(color=color, bold=True))
+            text.append("\n\n")
+            # Particles
+            for _ in range(3):
+                line = ""
+                for _ in range(30):
+                    if random.random() < 0.3:  # noqa: S311
+                        line += random.choice(self._explosion_chars)  # noqa: S311
+                    else:
+                        line += " "
+                text.append(line, style=Style(color=random.choice(colors)))  # noqa: S311
+                text.append("\n")
+
+            opacity = max(0, 1.0 - progress)
+            border_hex = f"#{int(168 * opacity):02x}{int(85 * opacity):02x}{int(247 * opacity):02x}"
+            return Panel.fit(text, border_style=Style(color=border_hex), padding=(1, 4))
+
+        # PHASE_DONE — minimal text before TUI loads
+        text = Text("⚡ ", style=Style(color=self.PRIMARY))
+        text.append("Ziro", style=Style(color=self.PRIMARY, bold=True))
+        text.append(f" v{self._version}", style=Style(dim=True))
+        return Panel.fit(text, border_style=Style(color=self.PRIMARY, dim=True), padding=(0, 2))
+
+    def _build_logo_panel(self) -> Panel:
+        shine_pos = self._tick % (len("Starting Ziro Agent") + 8)
+        start_line = self._build_start_line_text(shine_pos)
+
         content = Group(
-            Align.center(Text(self.BANNER.strip("\n"), style=self.PRIMARY_GREEN, justify="center")),
+            Align.center(Text(self.BANNER.strip("\n"), style=self.PRIMARY, justify="center")),
             Align.center(Text(" ")),
             Align.center(self._build_welcome_text()),
             Align.center(self._build_version_text()),
             Align.center(self._build_tagline_text()),
             Align.center(Text(" ")),
-            Align.center(start_line.copy()),
-            Align.center(Text(" ")),
-            Align.center(self._build_url_text()),
+            Align.center(start_line),
         )
 
-        return Panel.fit(content, border_style=self.PRIMARY_GREEN, padding=(1, 6))
-
-    def _build_url_text(self) -> Text:
-        return Text("ziro", style=Style(color=self.PRIMARY_GREEN, bold=True))
+        return Panel.fit(content, border_style=self.PRIMARY, padding=(1, 6))
 
     def _build_welcome_text(self) -> Text:
         text = Text("Welcome to ", style=Style(color="white", bold=True))
-        text.append("Ziro", style=Style(color=self.PRIMARY_GREEN, bold=True))
+        text.append("Ziro", style=Style(color=self.PRIMARY, bold=True))
         text.append("!", style=Style(color="white", bold=True))
         return text
 
@@ -167,29 +252,22 @@ class SplashScreen(Static):  # type: ignore[misc]
         return Text(f"v{self._version}", style=Style(color="white", dim=True))
 
     def _build_tagline_text(self) -> Text:
-        return Text("Open-source AI hackers for your apps", style=Style(color="white", dim=True))
+        return Text("AI Penetration Testing Agent", style=Style(color="white", dim=True))
 
-    def _build_start_line_text(self, phase: int) -> Text:
-        full_text = "Starting Ziro Agent"
-        text_len = len(full_text)
-
-        shine_pos = phase % (text_len + 8)
-
+    def _build_start_line_text(self, shine_pos: int) -> Text:
+        full_text = "Initializing"
         text = Text()
         for i, char in enumerate(full_text):
             dist = abs(i - shine_pos)
-
             if dist <= 1:
-                style = Style(color="bright_white", bold=True)
+                style = Style(color="#c084fc", bold=True)
             elif dist <= 3:
-                style = Style(color="white", bold=True)
+                style = Style(color=self.PRIMARY)
             elif dist <= 5:
-                style = Style(color="#a3a3a3")
+                style = Style(color=self.ACCENT)
             else:
                 style = Style(color="#525252")
-
             text.append(char, style=style)
-
         return text
 
 
@@ -268,7 +346,7 @@ class VulnerabilityDetailScreen(ModalScreen):  # type: ignore[misc]
         "info": "#3b82f6",  # Blue
     }
 
-    FIELD_STYLE: ClassVar[str] = "bold #4ade80"
+    FIELD_STYLE: ClassVar[str] = "bold #c084fc"
 
     def __init__(self, vulnerability: dict[str, Any]) -> None:
         super().__init__()
@@ -728,8 +806,8 @@ class ZiroTUIApp(App):  # type: ignore[misc]
             "#052e16",
             "#0d4a2a",
             "#15803d",
-            "#22c55e",
-            "#4ade80",
+            "#a855f7",
+            "#c084fc",
             "#86efac",  # Brightest
         ]
         self._dot_animation_timer: Any | None = None
