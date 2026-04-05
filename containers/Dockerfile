@@ -86,8 +86,7 @@ RUN go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest && \
     go install -v github.com/projectdiscovery/interactsh/cmd/interactsh-client@latest && \
     go install -v github.com/hahwul/dalfox/v2@latest && \
     go install -v github.com/zan8in/afrog/v3/cmd/afrog@latest && \
-    go install -v github.com/tsenart/vegeta@latest && \
-    go install -v github.com/zricethezav/gitleaks/v8/cmd/gitleaks@latest
+    go install -v github.com/tsenart/vegeta@latest
 
 RUN nuclei -update-templates
 
@@ -117,6 +116,10 @@ RUN git clone https://github.com/aravind0x7/JS-Snooper.git && \
 USER root
 
 RUN curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin
+
+# Gitleaks (secret scanning)
+RUN ARCH=$(dpkg --print-architecture) && \
+    curl -sSfL "https://github.com/gitleaks/gitleaks/releases/latest/download/gitleaks_8.27.2_linux_${ARCH}.tar.gz" | tar xz -C /usr/local/bin gitleaks || true
 
 RUN apt-get update && apt-get install -y zaproxy
 
