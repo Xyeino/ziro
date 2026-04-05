@@ -1,0 +1,51 @@
+<tools>
+  <tool name="google_dork">
+    <description>
+Generate Google dork queries for passive OSINT reconnaissance.
+Google dorks reveal sensitive files, admin panels, exposed configs, git repos, and more
+without directly scanning the target.
+
+Preset types: admin_panels, sensitive_files, exposed_docs, api_endpoints, config_files,
+error_pages, backup_files, git_exposure, open_dirs, subdomains, passwords, database
+
+Examples:
+- google_dork(domain="example.com", dork_type="all") — generate all 12 dork queries
+- google_dork(domain="example.com", dork_type="git_exposure") — check for exposed .git
+- google_dork(domain="example.com", custom_dork="site:example.com ext:php inurl:upload")
+
+Execute returned search_urls via browser or web_search tool.
+    </description>
+    <parameters>
+      <parameter name="domain" type="string" required="true">Target domain</parameter>
+      <parameter name="dork_type" type="string" required="false">Preset type or 'all' (default: all)</parameter>
+      <parameter name="custom_dork" type="string" required="false">Custom Google dork query</parameter>
+    </parameters>
+  </tool>
+
+  <tool name="check_breaches">
+    <description>
+Check if a domain or email appears in known data breaches (HaveIBeenPwned, BreachDirectory).
+Useful for finding leaked credentials, understanding target's security history.
+
+Examples:
+- check_breaches(domain="example.com") — check if domain was in breaches
+- check_breaches(email="admin@example.com") — check specific email
+    </description>
+    <parameters>
+      <parameter name="domain" type="string" required="false">Domain to check</parameter>
+      <parameter name="email" type="string" required="false">Email to check</parameter>
+    </parameters>
+  </tool>
+
+  <tool name="osint_recon">
+    <description>
+Passive OSINT reconnaissance — gathers intelligence WITHOUT touching the target directly.
+Checks: Certificate Transparency logs, DNS records, robots.txt, security.txt, email patterns.
+
+Use this early in the scan to build intelligence before active testing.
+    </description>
+    <parameters>
+      <parameter name="domain" type="string" required="true">Target domain</parameter>
+    </parameters>
+  </tool>
+</tools>

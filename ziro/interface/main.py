@@ -400,10 +400,23 @@ Examples:
         "-t",
         "--target",
         type=str,
-        required=True,
+        required=False,
         action="append",
         help="Target to test (URL, repository, local directory path, domain name, or IP address). "
         "Can be specified multiple times for multi-target scans.",
+    )
+
+    parser.add_argument(
+        "--panel",
+        action="store_true",
+        help="Launch the Ziro web panel (dashboard UI) instead of running a scan.",
+    )
+
+    parser.add_argument(
+        "--panel-port",
+        type=int,
+        default=8420,
+        help="Port for the web panel server (default: 8420).",
     )
     parser.add_argument(
         "--instruction",
@@ -456,6 +469,14 @@ Examples:
     )
 
     args = parser.parse_args()
+
+    # --panel mode doesn't need a target
+    if args.panel:
+        args.targets_info = []
+        return args
+
+    if not args.target:
+        parser.error("the following arguments are required: -t/--target")
 
     if args.instruction and args.instruction_file:
         parser.error(
@@ -677,6 +698,44 @@ def main() -> None:
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
     args = parse_arguments()
+
+    if args.panel:
+        from ziro.panel.server import _ensure_frontend_built, run_panel
+
+        console = Console()
+
+        console.print(
+            Panel(
+                Text.assemble(("⚡ Building Ziro Panel...", "bold #a855f7")),
+                border_style="#7c3aed",
+            )
+        )
+
+        if not _ensure_frontend_built():
+            console.print(
+                "[bold red]✗[/] Frontend build failed. "
+                "Make sure Node.js 20+ is installed, then run:\n"
+                "  [dim]cd ziro/panel/frontend && npm install && npx vite build[/]"
+            )
+            sys.exit(1)
+
+        console.print(
+            Panel(
+                Text.assemble(
+                    ("Ziro Web Panel\n", "bold #a855f7"),
+                    ("http://localhost:", "dim"),
+                    (str(args.panel_port), "bold #c084fc"),
+                ),
+                border_style="#a855f7",
+            )
+        )
+        try:
+            asyncio.run(run_panel(port=args.panel_port))
+        except (KeyboardInterrupt, SystemExit):
+            pass
+        finally:
+            console.print("\n[dim]Panel stopped.[/]")
+        return
 
     if args.config:
         apply_config_override(args.config)

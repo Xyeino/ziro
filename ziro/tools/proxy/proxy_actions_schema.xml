@@ -263,4 +263,42 @@
         - Shows request methods, paths, response codes, timing</description>
     </returns>
   </tool>
+
+  <tool name="search_burp_proxy_history">
+    <description>Search captured HTTP proxy traffic history. Human-friendly interface to find specific requests.
+
+Use this to:
+- Find login/auth endpoints: search_burp_proxy_history(search="login", host="target.com")
+- Find API calls: search_burp_proxy_history(search="/api/", method="POST")
+- Find auth tokens: search_burp_proxy_history(search="Bearer", host="target.com")
+- Find forms/submissions: search_burp_proxy_history(method="POST", hide_assets=True)
+- Find errors: search_burp_proxy_history(status_min=400, host="target.com")
+
+All browser traffic from the agent flows through the proxy and is captured here.
+After finding interesting requests, use view_request() to see full details,
+then repeat_request() to replay with modifications for testing.</description>
+    <parameters>
+      <parameter name="search" type="string" required="false">
+        Search text in raw request/response (regex supported). Examples: "password", "token", "/api/v1", "Set-Cookie"
+      </parameter>
+      <parameter name="host" type="string" required="false">
+        Filter by hostname (regex). Example: "target.com", "api\\.example"
+      </parameter>
+      <parameter name="method" type="string" required="false">
+        HTTP method filter: GET, POST, PUT, DELETE, PATCH, OPTIONS
+      </parameter>
+      <parameter name="status_min" type="integer" required="false">
+        Minimum response status code (e.g. 400 for errors only)
+      </parameter>
+      <parameter name="status_max" type="integer" required="false">
+        Maximum response status code (e.g. 299 for success only)
+      </parameter>
+      <parameter name="hide_assets" type="boolean" required="false">
+        Hide static assets (CSS, JS, images, fonts). Default: false
+      </parameter>
+      <parameter name="page_size" type="integer" required="false">
+        Number of results to return. Default: 25
+      </parameter>
+    </parameters>
+  </tool>
 </tools>

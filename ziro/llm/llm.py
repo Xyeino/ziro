@@ -1,4 +1,5 @@
 import asyncio
+import time
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from typing import Any
@@ -56,6 +57,50 @@ class RequestStats:
             "cost": round(self.cost, 4),
             "requests": self.requests,
         }
+
+
+class _RateLimiter:
+    """Global rate limiter shared across all LLM instances."""
+
+    _lock = asyncio.Lock() if hasattr(asyncio, "Lock") else None
+    _timestamps: list[float] = []
+    _rpm: int = 0  # 0 = no limit
+
+    @classmethod
+    def set_rpm(cls, rpm: int) -> None:
+        cls._rpm = max(0, rpm)
+        cls._timestamps.clear()
+
+    @classmethod
+    async def wait_if_needed(cls) -> None:
+        if cls._rpm <= 0:
+            return
+
+        now = time.time()
+        # Clean old timestamps (older than 60s)
+        cls._timestamps = [t for t in cls._timestamps if now - t < 60]
+
+        if len(cls._timestamps) >= cls._rpm:
+            # Wait until the oldest request is >60s ago
+            sleep_time = 60 - (now - cls._timestamps[0]) + 0.1
+            if sleep_time > 0:
+                await asyncio.sleep(sleep_time)
+
+        cls._timestamps.append(time.time())
+
+
+# Load rate limit from settings on import
+try:
+    import json
+    from pathlib import Path
+    _settings_path = Path.home() / ".ziro" / "settings.json"
+    if _settings_path.exists():
+        _s = json.loads(_settings_path.read_text())
+        _rpm = _s.get("settings", {}).get("rpm_limit", 0)
+        if _rpm:
+            _RateLimiter.set_rpm(int(_rpm))
+except Exception:
+    pass
 
 
 class LLM:
@@ -162,7 +207,7 @@ class LLM:
         self, conversation_history: list[dict[str, Any]]
     ) -> AsyncIterator[LLMResponse]:
         messages = self._prepare_messages(conversation_history)
-        max_retries = int(Config.get("ziro_llm_max_retries") or "5")
+        max_retries = int(Config.get("ziro_llm_max_retries") or "15")
 
         for attempt in range(max_retries + 1):
             try:
@@ -172,7 +217,14 @@ class LLM:
             except Exception as e:  # noqa: BLE001
                 if attempt >= max_retries or not self._should_retry(e):
                     self._raise_error(e)
-                wait = min(90, 2 * (2**attempt))
+                # Rate limit errors (429) — wait longer (60s), others use exponential backoff
+                is_rate_limit = "429" in str(e) or "rate" in str(e).lower() or "limit" in str(e).lower()
+                if is_rate_limit:
+                    import logging
+                    logging.getLogger(__name__).warning("Rate limit hit — waiting 60s before retry (attempt %d/%d)", attempt + 1, max_retries)
+                    wait = 60
+                else:
+                    wait = min(90, 2 * (2**attempt))
                 await asyncio.sleep(wait)
 
     async def _stream(self, messages: list[dict[str, Any]]) -> AsyncIterator[LLMResponse]:
@@ -181,6 +233,7 @@ class LLM:
         done_streaming = 0
 
         self._total_stats.requests += 1
+        await _RateLimiter.wait_if_needed()
         response = await acompletion(**self._build_completion_args(messages), stream=True)
 
         async for chunk in response:

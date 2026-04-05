@@ -84,7 +84,10 @@ RUN go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest && \
     go install -v github.com/projectdiscovery/cvemap/cmd/vulnx@latest && \
     go install -v github.com/jaeles-project/gospider@latest && \
     go install -v github.com/projectdiscovery/interactsh/cmd/interactsh-client@latest && \
-    go install -v github.com/hahwul/dalfox/v2@latest
+    go install -v github.com/hahwul/dalfox/v2@latest && \
+    go install -v github.com/zan8in/afrog/v3/cmd/afrog@latest && \
+    go install -v github.com/tsenart/vegeta@latest && \
+    go install -v github.com/zricethezav/gitleaks/v8/cmd/gitleaks@latest
 
 RUN nuclei -update-templates
 
@@ -93,14 +96,15 @@ RUN pipx install arjun && \
     pipx inject dirsearch setuptools && \
     pipx install wafw00f
 
-RUN pip install --break-system-packages theHarvester commix
+RUN pip install --break-system-packages theHarvester commix XSStrike cloud_enum
 
 ENV NPM_CONFIG_PREFIX=/home/pentester/.npm-global
 RUN mkdir -p /home/pentester/.npm-global
 
 RUN npm install -g retire@latest && \
     npm install -g eslint@latest && \
-    npm install -g js-beautify@latest
+    npm install -g js-beautify@latest && \
+    npm install -g @waftester/cli@latest
 
 WORKDIR /home/pentester/tools
 RUN git clone https://github.com/aravind0x7/JS-Snooper.git && \
@@ -168,6 +172,12 @@ COPY pyproject.toml poetry.lock ./
 
 USER pentester
 RUN poetry install --no-root --without dev --extras sandbox
+
+# Install Camoufox (anti-detect Firefox) — preferred for bypassing WAF/captcha
+# Falls back to Playwright Chromium if Camoufox is not available
+RUN /app/venv/bin/pip install camoufox && \
+    /app/venv/bin/python -m camoufox fetch || true
+# Also keep Playwright Chromium as fallback
 RUN poetry run playwright install chromium
 
 RUN /app/venv/bin/pip install -r /home/pentester/tools/jwt_tool/requirements.txt && \

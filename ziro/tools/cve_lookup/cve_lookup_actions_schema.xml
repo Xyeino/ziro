@@ -1,0 +1,38 @@
+<tool name="cve_lookup">
+  <description>
+Search the NVD (NIST National Vulnerability Database) for CVE vulnerabilities.
+Automatically checks trickest/cve GitHub repo for public PoC exploit links.
+Returns CWE descriptions for vulnerability classification.
+
+Examples:
+- cve_lookup(keyword="nginx 1.24") — find CVEs affecting nginx 1.24
+- cve_lookup(keyword="wordpress xmlrpc") — find WordPress XML-RPC vulnerabilities
+- cve_lookup(cve_id="CVE-2024-21298") — look up a specific CVE with PoC links
+- cve_lookup(keyword="react", cvss_severity="CRITICAL") — find critical React CVEs
+
+Returns for each CVE:
+- CVE ID, description, CVSS score + severity + vector
+- CWE weakness IDs with human-readable descriptions
+- Affected products and versions
+- References (vendor advisories, patches)
+- has_public_exploit: whether a public PoC exists
+- poc_links: GitHub repositories with exploit code (from trickest/cve database)
+- actively_exploited: whether this CVE is in CISA's Known Exploited Vulnerabilities list
+- kev: CISA KEV details (vendor, product, date added, ransomware usage)
+
+PRIORITY: CVEs marked actively_exploited=true are confirmed used by real attackers.
+These should be tested FIRST as they represent the highest real-world risk.
+When has_public_exploit is true, examine the poc_links to find working exploits.
+  </description>
+  <parameters>
+    <parameter name="keyword" type="string" required="false">
+      Search keyword — technology name, version, vulnerability type (e.g. 'apache 2.4', 'jwt bypass', 'prototype pollution')
+    </parameter>
+    <parameter name="cve_id" type="string" required="false">
+      Specific CVE ID to look up (e.g. 'CVE-2024-21298')
+    </parameter>
+    <parameter name="cvss_severity" type="string" required="false">
+      Filter by CVSS v3 severity: LOW, MEDIUM, HIGH, or CRITICAL
+    </parameter>
+  </parameters>
+</tool>

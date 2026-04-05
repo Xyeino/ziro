@@ -246,6 +246,20 @@ class ProxyManager:
     ) -> dict[str, Any]:
         if headers is None:
             headers = {}
+
+        # Auto-inject custom headers from scan config
+        try:
+            from ziro.telemetry.tracer import get_global_tracer
+
+            tracer = get_global_tracer()
+            if tracer and tracer.scan_config:
+                custom = tracer.scan_config.get("custom_headers", {})
+                for k, v in custom.items():
+                    if k not in headers:  # Don't override explicit headers
+                        headers[k] = v
+        except Exception:
+            pass
+
         try:
             start_time = time.time()
             response = requests.request(

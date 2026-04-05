@@ -131,4 +131,8 @@ class ZiroAgent(BaseAgent):
         if user_instructions:
             task_description += f"\n\nSpecial instructions: {user_instructions}"
 
+        recon_summary = scan_config.get("recon_summary", "")
+        if recon_summary:
+            task_description += f"\n\n{recon_summary}"
+
         return await self.agent_loop(task=task_description)

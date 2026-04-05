@@ -17,6 +17,16 @@ MAX_INDIVIDUAL_LOG_LENGTH = 1_000
 MAX_CONSOLE_LOGS_COUNT = 200
 MAX_JS_RESULT_LENGTH = 5_000
 
+# Try to use Camoufox (anti-detect Firefox) if available, fallback to Playwright Chromium
+_USE_CAMOUFOX = False
+try:
+    from camoufox.async_api import AsyncCamoufox  # noqa: F401
+
+    _USE_CAMOUFOX = True
+    logger.info("Camoufox detected — using anti-detect Firefox browser")
+except ImportError:
+    logger.info("Camoufox not installed — falling back to Playwright Chromium")
+
 
 class _BrowserState:
     """Singleton state for the shared browser instance."""
@@ -26,6 +36,7 @@ class _BrowserState:
     event_loop_thread: threading.Thread | None = None
     playwright: Playwright | None = None
     browser: Browser | None = None
+    _camoufox_context_manager: Any = None  # Holds the Camoufox CM to keep it alive
 
 
 _state = _BrowserState()
@@ -60,16 +71,34 @@ async def _create_browser() -> Browser:
             await _state.playwright.stop()
         _state.playwright = None
 
-    _state.playwright = await async_playwright().start()
-    _state.browser = await _state.playwright.chromium.launch(
-        headless=True,
-        args=[
-            "--no-sandbox",
-            "--disable-dev-shm-usage",
-            "--disable-gpu",
-            "--disable-web-security",
-        ],
-    )
+    if _USE_CAMOUFOX:
+        # Launch Camoufox — anti-detect Firefox with native fingerprint spoofing
+        from camoufox.async_api import AsyncCamoufox
+
+        cm = AsyncCamoufox(
+            headless=True,
+            humanize=True,       # Human-like mouse movements
+            geoip=False,         # No GeoIP lookup needed
+        )
+        browser = await cm.__aenter__()
+        _state._camoufox_context_manager = cm
+        _state.browser = browser
+        _state.playwright = None  # Camoufox manages its own Playwright
+        logger.info("Camoufox browser launched (anti-detect Firefox, headless)")
+    else:
+        # Fallback: standard Playwright Chromium
+        _state.playwright = await async_playwright().start()
+        _state.browser = await _state.playwright.chromium.launch(
+            headless=True,
+            args=[
+                "--no-sandbox",
+                "--disable-dev-shm-usage",
+                "--disable-gpu",
+                "--disable-web-security",
+            ],
+        )
+        logger.info("Playwright Chromium browser launched (headless)")
+
     return _state.browser
 
 
@@ -133,13 +162,30 @@ class BrowserInstance:
     async def _create_context(self, url: str | None = None) -> dict[str, Any]:
         assert self._browser is not None
 
-        self.context = await self._browser.new_context(
-            viewport={"width": 1280, "height": 720},
-            user_agent=(
+        context_kwargs: dict[str, Any] = {
+            "viewport": {"width": 1280, "height": 720},
+        }
+
+        if not _USE_CAMOUFOX:
+            context_kwargs["user_agent"] = (
                 "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
-                "(KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-            ),
-        )
+                "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+            )
+
+        # Inject custom headers from scan config (authorization, cookies, etc.)
+        try:
+            from ziro.telemetry.tracer import get_global_tracer
+
+            tracer = get_global_tracer()
+            if tracer and tracer.scan_config:
+                custom_headers = tracer.scan_config.get("custom_headers", {})
+                if custom_headers:
+                    context_kwargs["extra_http_headers"] = custom_headers
+                    logger.info("Injected %d custom headers into browser context", len(custom_headers))
+        except Exception:
+            pass
+
+        self.context = await self._browser.new_context(**context_kwargs)
 
         page = await self.context.new_page()
         tab_id = f"tab_{self._next_tab_id}"
@@ -172,6 +218,25 @@ class BrowserInstance:
         title = await page.title()
         viewport = page.viewport_size
 
+        # Detect captcha/challenge pages
+        captcha_detected = False
+        try:
+            page_text = await page.inner_text("body")
+            page_text_lower = page_text.lower() if page_text else ""
+            captcha_keywords = [
+                "verify you are human", "проверяем, что вы не робот",
+                "captcha", "challenge-platform", "cf-turnstile",
+                "hcaptcha", "recaptcha", "just a moment",
+                "checking your browser", "attention required",
+                "please complete the security check",
+                "are you a robot", "not a robot",
+            ]
+            if any(kw in page_text_lower for kw in captcha_keywords):
+                captcha_detected = True
+                logger.warning("CAPTCHA detected on %s", url)
+        except Exception:
+            pass
+
         all_tabs = {}
         for tid, tab_page in self.pages.items():
             all_tabs[tid] = {
@@ -179,7 +244,7 @@ class BrowserInstance:
                 "title": await tab_page.title() if not tab_page.is_closed() else "Closed",
             }
 
-        return {
+        state: dict[str, Any] = {
             "screenshot": screenshot_b64,
             "url": url,
             "title": title,
@@ -187,6 +252,34 @@ class BrowserInstance:
             "tab_id": tab_id,
             "all_tabs": all_tabs,
         }
+
+        if captcha_detected:
+            state["captcha_detected"] = True
+            state["captcha_message"] = (
+                "⚠️ CAPTCHA/CHALLENGE DETECTED on this page. "
+                "The page is showing a human verification challenge. "
+                "You CANNOT solve this automatically. "
+                "Request human assistance by informing the operator that a captcha "
+                "needs to be solved at this URL. Meanwhile, try alternative approaches: "
+                "use API endpoints directly, try different subdomains, or use terminal tools "
+                "instead of the browser."
+            )
+            # Try to create assist request via panel server
+            try:
+                from ziro.tools.context import get_current_agent_id
+                agent_id = get_current_agent_id()
+                from ziro.panel.server import add_assist_request
+                add_assist_request(
+                    agent_id=agent_id,
+                    assist_type="captcha",
+                    message=f"CAPTCHA detected on {url} — human needs to solve it",
+                    url=url,
+                    screenshot=screenshot_b64,
+                )
+            except Exception:
+                pass  # Not in panel context, skip
+
+        return state
 
     def launch(self, url: str | None = None) -> dict[str, Any]:
         with self._execution_lock:
@@ -546,6 +639,12 @@ class BrowserInstance:
             file_path = str(Path("/workspace") / file_path)
 
         page = self.pages[tab_id]
+
+        if _USE_CAMOUFOX:
+            # Firefox (Camoufox) doesn't support page.pdf() the same way as Chromium.
+            # Use print-to-file via JS instead.
+            raise ValueError("PDF export is not supported with Camoufox (Firefox). Use screenshot instead.")
+
         await page.pdf(path=file_path)
 
         state = await self._get_page_state(tab_id)

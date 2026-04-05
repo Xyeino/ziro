@@ -111,3 +111,56 @@ def view_sitemap_entry(
 
     manager = get_proxy_manager()
     return manager.view_sitemap_entry(entry_id)
+
+
+@register_tool
+def search_burp_proxy_history(
+    search: str = "",
+    host: str = "",
+    method: str = "",
+    status_min: int = 0,
+    status_max: int = 999,
+    hide_assets: bool = False,
+    page_size: int = 25,
+) -> dict[str, Any]:
+    """Search captured HTTP proxy traffic (Caido). Convenience wrapper matching common proxy search patterns.
+
+    Use this to find specific requests in the proxy history — login endpoints,
+    API calls, interesting parameters, authentication tokens, etc.
+    """
+    from .proxy_manager import get_proxy_manager
+
+    # Build HTTPQL filter from human-friendly params
+    filters: list[str] = []
+    if host:
+        filters.append(f'req.host.regex:"{host}"')
+    if method:
+        filters.append(f'req.method.regex:"{method.upper()}"')
+    if search:
+        filters.append(f'req.raw.regex:"{search}"')
+    if status_min > 0:
+        filters.append(f"resp.code.gte:{status_min}")
+    if status_max < 999:
+        filters.append(f"resp.code.lte:{status_max}")
+    if hide_assets:
+        # Exclude common static assets
+        filters.append('req.ext.ne:"css"')
+        filters.append('req.ext.ne:"js"')
+        filters.append('req.ext.ne:"png"')
+        filters.append('req.ext.ne:"jpg"')
+        filters.append('req.ext.ne:"gif"')
+        filters.append('req.ext.ne:"svg"')
+        filters.append('req.ext.ne:"woff"')
+        filters.append('req.ext.ne:"woff2"')
+
+    httpql = " AND ".join(filters) if filters else None
+
+    manager = get_proxy_manager()
+    return manager.list_requests(
+        httpql_filter=httpql,
+        start_page=1,
+        end_page=1,
+        page_size=page_size,
+        sort_by="timestamp",
+        sort_order="desc",
+    )

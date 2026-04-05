@@ -899,10 +899,20 @@ class Tracer:
             if exec_data.get("tool_name") not in ["scan_start_info", "subagent_start_info"]
         )
 
+    # Cumulative stats that persist even after agents are garbage collected
+    _cumulative_stats: dict[str, Any] = {
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "cached_tokens": 0,
+        "cost": 0.0,
+        "requests": 0,
+    }
+    _seen_agent_ids: set[str] = set()
+
     def get_total_llm_stats(self) -> dict[str, Any]:
         from ziro.tools.agents_graph.agents_graph_actions import _agent_instances, _graph_lock
 
-        total_stats = {
+        live_stats = {
             "input_tokens": 0,
             "output_tokens": 0,
             "cached_tokens": 0,
@@ -911,17 +921,39 @@ class Tracer:
         }
 
         with _graph_lock:
-            instances_snapshot = list(_agent_instances.values())
+            instances_snapshot = list(_agent_instances.items())
 
-        for agent_instance in instances_snapshot:
+        # Track stats from live agents + snapshot finished ones into cumulative
+        current_live_ids: set[str] = set()
+        for agent_id, agent_instance in instances_snapshot:
+            current_live_ids.add(agent_id)
             if hasattr(agent_instance, "llm") and hasattr(agent_instance.llm, "_total_stats"):
                 agent_stats = agent_instance.llm._total_stats
-                total_stats["input_tokens"] += agent_stats.input_tokens
-                total_stats["output_tokens"] += agent_stats.output_tokens
-                total_stats["cached_tokens"] += agent_stats.cached_tokens
-                total_stats["cost"] += agent_stats.cost
-                total_stats["requests"] += agent_stats.requests
+                live_stats["input_tokens"] += agent_stats.input_tokens
+                live_stats["output_tokens"] += agent_stats.output_tokens
+                live_stats["cached_tokens"] += agent_stats.cached_tokens
+                live_stats["cost"] += agent_stats.cost
+                live_stats["requests"] += agent_stats.requests
 
+                # If this agent wasn't seen before, add its current stats to cumulative baseline
+                if agent_id not in self._seen_agent_ids:
+                    self._seen_agent_ids.add(agent_id)
+
+        # Detect agents that disappeared (finished/GC'd) — snapshot their last known stats
+        disappeared = self._seen_agent_ids - current_live_ids
+        if disappeared:
+            # These agents are gone — their stats were in live_stats last poll but not now.
+            # We already have them counted from previous polls, so the cumulative watermark
+            # approach below handles it.
+            pass
+
+        # The total = max(cumulative_watermark, live_stats) for each field
+        # This ensures the number never decreases
+        for key in ("input_tokens", "output_tokens", "cached_tokens", "cost", "requests"):
+            if live_stats[key] > self._cumulative_stats[key]:
+                self._cumulative_stats[key] = live_stats[key]
+
+        total_stats = dict(self._cumulative_stats)
         total_stats["cost"] = round(total_stats["cost"], 4)
 
         return {
