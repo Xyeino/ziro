@@ -2769,27 +2769,6 @@ function SettingsPage() {
         )}
       </div>
 
-      {/* Language */}
-      <div className="bg-[#111] border border-[#222] rounded-lg p-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Globe className="w-5 h-5 text-blue-400" />
-          <div>
-            <h3 className="text-sm font-medium text-[#f2f2f2]">Language / Язык</h3>
-            <p className="text-xs text-[#888] mt-0.5">Interface language</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-1 bg-[#0a0a0a] rounded-lg p-1 border border-[#222]">
-          {(['en', 'ru'] as const).map(l => (
-            <button key={l} onClick={async () => {
-              await fetch('/api/settings', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({language: l}) });
-              window.location.reload();
-            }} className={cn("px-3 py-1.5 rounded text-xs font-medium transition-colors", lang === l ? "bg-[#a855f7] text-white" : "text-[#888] hover:text-[#d4d4d4]")}>
-              {l === 'en' ? 'English' : 'Русский'}
-            </button>
-          ))}
-        </div>
-      </div>
-
       {/* Persona */}
       <div className="bg-[#111] border border-[#222] rounded-lg p-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
