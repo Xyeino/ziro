@@ -1805,6 +1805,7 @@ function TargetOverview({ scanStatus }: { scanStatus?: ScanStatus | null }) {
 function Dashboard({ liveAgents, liveVulns }: { liveAgents?: any, liveVulns?: Vulnerability[] | null }) {
   const [expandedAgent, setExpandedAgent] = useState<number | null>(null);
   const [todos, setTodos] = useState<TodoItem[]>([]);
+  const [secScore, setSecScore] = useState<any>(null);
 
   // Poll todos
   useEffect(() => {
@@ -1812,6 +1813,8 @@ function Dashboard({ liveAgents, liveVulns }: { liveAgents?: any, liveVulns?: Vu
     const poll = async () => {
       const res = await api.getTodos();
       if (active && res) setTodos(res.todos);
+      const scoreRes = await api.getSecurityScore();
+      if (active && scoreRes) setSecScore(scoreRes);
     };
     poll();
     const id = setInterval(poll, 3000);
@@ -1830,7 +1833,7 @@ function Dashboard({ liveAgents, liveVulns }: { liveAgents?: any, liveVulns?: Vu
     { label: 'Total Agents', value: String(agents.length), icon: Cpu, color: 'text-blue-500' },
     { label: 'Active Tests', value: String(activeCount), icon: Activity, color: 'text-green-500' },
     { label: 'Vulnerabilities', value: String(vulnCount), icon: ShieldAlert, color: 'text-red-500' },
-    { label: 'Critical Risk', value: String(critCount), icon: AlertTriangle, color: 'text-orange-500' },
+    { label: 'Security Score', value: secScore?.grade || '?', icon: Shield, color: secScore?.grade === 'F' ? 'text-red-500' : secScore?.grade === 'D' ? 'text-orange-500' : secScore?.grade === 'C' ? 'text-yellow-500' : 'text-green-500' },
   ];
 
   // Show ALL agents, not just running

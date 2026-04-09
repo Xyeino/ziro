@@ -1743,7 +1743,54 @@ async def create_scan(req: CreateScanRequest) -> dict[str, Any]:
             "  'Validate these findings. For each one: reproduce it independently,\n"
             "   confirm the impact is real, rate severity accurately, and filter out\n"
             "   any false positives or low-impact issues.'\n"
-            "This second pass catches mistakes and strengthens the report.\n"
+            "This second pass catches mistakes and strengthens the report.\n\n"
+
+            "=== SMART PAYLOAD GENERATION ===\n"
+            "Do NOT use generic payloads. Adapt based on target:\n"
+            "- Analyze error messages to understand backend (MySQL vs PostgreSQL vs MongoDB)\n"
+            "- Check WAF vendor and use vendor-specific bypass payloads\n"
+            "- Study response patterns: what chars are filtered? What encoding is accepted?\n"
+            "- For SQLi: if MySQL → use /*!50000*/ comments. If PostgreSQL → use $$ dollar quoting\n"
+            "- For XSS: if CSP blocks inline → try event handlers. If filter strips <script> → use <img onerror>\n"
+            "- For SSRF: if IP blocked → try DNS rebinding, decimal IP, IPv6 mapped\n"
+            "- Build payloads incrementally: test single char → test short payload → build full exploit\n\n"
+
+            "=== VULNERABILITY CORRELATION ===\n"
+            "After finding vulnerabilities, look for CHAINS that multiply impact:\n"
+            "- XSS + no HttpOnly cookie + no CSP = Session Hijacking (Critical)\n"
+            "- IDOR + admin email exposed = Account Takeover\n"
+            "- SSRF + cloud metadata = AWS key theft → full infrastructure compromise\n"
+            "- Open redirect + OAuth = Authentication bypass\n"
+            "- Info disclosure + credential stuffing = Mass account compromise\n"
+            "- Race condition + payment endpoint = Financial loss\n"
+            "Always report the CHAIN, not individual findings. Chains get higher severity.\n\n"
+
+            "=== GRAPHQL DEEP TESTING ===\n"
+            "If GraphQL endpoint found:\n"
+            "- Batching attacks: send array of queries [{query1},{query2},...] to bypass rate limits\n"
+            "- Nested query DoS: {user{friends{friends{friends...}}}} — test depth limits\n"
+            "- Field suggestion abuse: send typo field → check if server suggests real field names\n"
+            "- Mutation fuzzing: test every mutation with invalid/unexpected input types\n"
+            "- Introspection even if disabled: try __schema via aliases, fragments, GET params\n"
+            "- Authorization per-field: query field A (allowed) + field B (restricted) in same query\n"
+            "- Type confusion: send String where Int expected, Array where Object expected\n\n"
+
+            "=== MOBILE API TESTING ===\n"
+            "Test endpoints with mobile User-Agent — some APIs return MORE data to mobile clients:\n"
+            "- Set User-Agent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)'\n"
+            "- Also try: app-specific headers like X-App-Version, X-Platform: ios/android\n"
+            "- Compare response sizes: mobile vs desktop — if mobile gets more fields = info leak\n"
+            "- Test API versioning: /api/v1 vs /api/v2 vs /api/mobile — different access controls\n"
+            "- Check for hidden mobile-only endpoints: /api/mobile/, /m/api/, /app/api/\n\n"
+
+            "=== RESPONSE DIFFING ===\n"
+            "Automatically compare responses to find anomalies:\n"
+            "- Same endpoint, with auth vs without auth: size difference = data exposure\n"
+            "- Same endpoint, user A vs user B token: content difference = IDOR\n"
+            "- Same request repeated 10x: inconsistent responses = race condition or caching issue\n"
+            "- Same endpoint, different HTTP methods: GET vs POST vs PUT = method override vuln\n"
+            "- Baseline request vs injected request: any change in body = parameter influence\n"
+            "Use python_action to automate: send both requests, compare response.text lengths.\n"
             "=== END ADVANCED TECHNIQUES ==="
         )
 
@@ -2287,6 +2334,64 @@ async def diff_scans(scan_a: int, scan_b: int) -> dict[str, Any]:
         }
     except Exception as e:
         return {"error": str(e)}
+
+
+# --- Security Score ---
+
+@app.get("/api/security-score")
+async def get_security_score() -> dict[str, Any]:
+    """Calculate A-F security score based on findings."""
+    tracer = get_global_tracer()
+    if not tracer:
+        return {"grade": "?", "score": 0, "breakdown": {}}
+
+    vulns = tracer.vulnerability_reports
+    if not vulns:
+        return {"grade": "A+", "score": 100, "breakdown": {"message": "No vulnerabilities found"}}
+
+    # Scoring: start at 100, deduct per vulnerability
+    score = 100
+    deductions = {"critical": 0, "high": 0, "medium": 0, "low": 0}
+    for v in vulns:
+        sev = v.get("severity", "info").lower()
+        if sev == "critical":
+            score -= 25
+            deductions["critical"] += 1
+        elif sev == "high":
+            score -= 15
+            deductions["high"] += 1
+        elif sev == "medium":
+            score -= 8
+            deductions["medium"] += 1
+        elif sev == "low":
+            score -= 3
+            deductions["low"] += 1
+
+    score = max(0, score)
+
+    # Grade mapping
+    if score >= 95:
+        grade = "A+"
+    elif score >= 90:
+        grade = "A"
+    elif score >= 80:
+        grade = "B"
+    elif score >= 70:
+        grade = "C"
+    elif score >= 50:
+        grade = "D"
+    else:
+        grade = "F"
+
+    grade_color = {"A+": "#22c55e", "A": "#22c55e", "B": "#3b82f6", "C": "#eab308", "D": "#f97316", "F": "#ef4444"}.get(grade, "#888")
+
+    return {
+        "grade": grade,
+        "score": score,
+        "color": grade_color,
+        "total_vulns": len(vulns),
+        "breakdown": deductions,
+    }
 
 
 # --- Scan Templates ---

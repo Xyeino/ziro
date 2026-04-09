@@ -336,4 +336,5 @@ export const api = {
   sendTelegram: (message?: string) => postJSON<any>('/notify/telegram', { message: message || '' }),
   // Compliance
   getCompliance: () => fetchJSON<any>('/compliance'),
+  getSecurityScore: () => fetchJSON<any>('/security-score'),
 };
