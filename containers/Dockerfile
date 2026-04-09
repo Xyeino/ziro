@@ -95,7 +95,7 @@ RUN pipx install arjun && \
     pipx inject dirsearch setuptools && \
     pipx install wafw00f
 
-RUN pip install --break-system-packages theHarvester commix XSStrike cloud_enum
+RUN pip install --break-system-packages theHarvester commix XSStrike cloud_enum slither-analyzer mythril
 
 ENV NPM_CONFIG_PREFIX=/home/pentester/.npm-global
 RUN mkdir -p /home/pentester/.npm-global

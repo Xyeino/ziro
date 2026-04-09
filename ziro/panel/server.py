@@ -1280,6 +1280,7 @@ class CreateScanRequest(BaseModel):
     red_team: bool = False
     zeroday: bool = False
     infra_mode: bool = False
+    smart_contract: bool = False
     auto_risk_filter: bool = True
     credentials: list[dict[str, str]] = []
     request_headers: list[dict[str, str]] = []
@@ -1977,6 +1978,60 @@ async def create_scan(req: CreateScanRequest) -> dict[str, Any]:
             "TOOLS: nmap, hydra, enum4linux, smbclient, redis-cli, searchsploit, "
             "metasploit (msfconsole), nikto, nuclei, feroxbuster, sqlmap, netcat.\n"
             "For each finding, provide: exact commands used, output received, impact assessment."
+        )
+
+    if req.smart_contract:
+        parts.append(
+            "SMART CONTRACT AUDIT MODE — Target is a Solidity/EVM smart contract.\n\n"
+
+            "PHASE 1: CODE ACQUISITION\n"
+            "- If target is contract address: fetch verified source from Etherscan/BSCScan API\n"
+            "  curl 'https://api.etherscan.io/api?module=contract&action=getsourcecode&address=ADDRESS'\n"
+            "- If target is GitHub repo: clone and analyze all .sol files\n"
+            "- Identify: Solidity version, compiler settings, dependencies (OpenZeppelin, etc.)\n\n"
+
+            "PHASE 2: STATIC ANALYSIS\n"
+            "Run automated tools on the source code:\n"
+            "- slither . --print human-summary — overview of contract structure\n"
+            "- slither . --detect all — run all 92+ vulnerability detectors\n"
+            "- slither . --print contract-summary — functions, modifiers, state variables\n"
+            "- myth analyze CONTRACT.sol — symbolic execution for deep bugs\n"
+            "Parse and analyze ALL findings from both tools.\n\n"
+
+            "PHASE 3: MANUAL AI ANALYSIS\n"
+            "Read the contract code and check for:\n"
+            "- REENTRANCY: external calls before state updates? Missing ReentrancyGuard?\n"
+            "- ACCESS CONTROL: missing onlyOwner/onlyRole? Public functions that should be restricted?\n"
+            "- INTEGER OVERFLOW/UNDERFLOW: unchecked math? Using Solidity <0.8.0 without SafeMath?\n"
+            "- FLASH LOAN VECTORS: price oracles manipulable in single tx? Spot price used?\n"
+            "- FRONT-RUNNING (MEV): can miners/validators profit from tx ordering?\n"
+            "- ORACLE MANIPULATION: single oracle source? TWAP vs spot price?\n"
+            "- DELEGATECALL: delegatecall to user-controlled address? Storage collision risk?\n"
+            "- SELFDESTRUCT: can contract be destroyed? Remaining funds handled?\n"
+            "- TIMESTAMP DEPENDENCE: using block.timestamp for critical logic?\n"
+            "- TX.ORIGIN: using tx.origin for auth instead of msg.sender?\n"
+            "- UNCHECKED RETURNS: external call return values ignored?\n"
+            "- DENIAL OF SERVICE: unbounded loops? Gas griefing? Pull-over-push violated?\n"
+            "- STORAGE COLLISION: proxy pattern with conflicting storage slots?\n"
+            "- SIGNATURE REPLAY: missing nonce/chainId in signed messages?\n"
+            "- ERC20/721 COMPLIANCE: missing events? Non-standard behavior?\n\n"
+
+            "PHASE 4: ECONOMIC ANALYSIS\n"
+            "- Token economics: can supply be inflated? Can tokens be minted without limit?\n"
+            "- Liquidity pool: sandwich attack possible? Slippage manipulation?\n"
+            "- Governance: flash loan governance attack? Vote manipulation?\n"
+            "- Fee extraction: can fees be set to 100%? Fee bypass possible?\n\n"
+
+            "PHASE 5: REPORT\n"
+            "For each finding provide:\n"
+            "- Vulnerability type and severity (Critical/High/Medium/Low/Informational)\n"
+            "- Affected function and line number\n"
+            "- Proof of concept (Solidity test or transaction steps)\n"
+            "- Recommended fix with code example\n"
+            "- Impact: what can attacker gain? How much funds at risk?\n\n"
+
+            "TOOLS: slither, mythril (myth), solc, forge (Foundry), cast (Etherscan interaction).\n"
+            "Use slither as primary scanner, mythril for deep symbolic analysis."
         )
 
     if req.instruction:

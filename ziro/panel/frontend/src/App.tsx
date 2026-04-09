@@ -58,7 +58,7 @@ import 'reactflow/dist/style.css';
 import { cn } from './lib/utils';
 
 // --- Types ---
-type ScanMode = 'standard' | 'full' | 'infra';
+type ScanMode = 'standard' | 'full' | 'infra' | 'smartcontract';
 
 interface Credential {
   username: string;
@@ -3446,6 +3446,7 @@ function CreateTestModal({ onClose }: { onClose: () => void }) {
             red_team: formData.scanMode === 'full' || formData.scanMode === 'infra',
             zeroday: formData.scanMode === 'full' || formData.scanMode === 'infra',
             infra_mode: formData.scanMode === 'infra',
+            smart_contract: formData.scanMode === 'smartcontract',
             auto_risk_filter: formData.autoRiskFilter,
             credentials: formData.credentials,
             request_headers: formData.requestHeaders,
@@ -3755,12 +3756,14 @@ function CreateTestModal({ onClose }: { onClose: () => void }) {
                       { id: 'standard' as ScanMode, label: 'Standard Scan', desc: 'Reconnaissance, vulnerability discovery, technology fingerprinting. Fast and comprehensive surface analysis.', Icon: Search, color: 'blue' },
                       { id: 'full' as ScanMode, label: 'Deep + Exploit', desc: 'Full depth: exploit testing, 0day hunting, CVE research, race conditions, auth bypass, business logic abuse, fuzzing.', Icon: Shield, color: 'red' },
                       { id: 'infra' as ScanMode, label: 'Infrastructure', desc: 'Server/IP pentest: full port scan, service exploits, SSH/FTP brute-force, privilege escalation, cloud metadata, container escape.', Icon: Server, color: 'purple' },
+                      { id: 'smartcontract' as ScanMode, label: 'Smart Contract', desc: 'Solidity/EVM audit: reentrancy, overflow, access control, flash loans, front-running, oracle manipulation. Slither + Mythril + AI analysis.', Icon: Code, color: 'cyan' },
                     ]).map(mode => {
                       const isSelected = formData.scanMode === mode.id;
                       const colorMap: Record<string, [string, string, string]> = {
                         blue: ['border-blue-500/50', 'bg-blue-500/10', 'text-blue-400'],
                         red: ['border-red-500/50', 'bg-red-500/10', 'text-red-400'],
                         purple: ['border-[#a855f7]/50', 'bg-[#a855f7]/10', 'text-[#a855f7]'],
+                        cyan: ['border-cyan-500/50', 'bg-cyan-500/10', 'text-cyan-400'],
                       };
                       const [borderColor, bgColor, iconColor] = colorMap[mode.color] || colorMap.blue;
                       return (
@@ -3797,6 +3800,14 @@ function CreateTestModal({ onClose }: { onClose: () => void }) {
                       <Server className="w-4 h-4 text-[#a855f7] mt-0.5 flex-shrink-0" />
                       <div className="text-xs text-purple-300 leading-relaxed">
                         <strong>Infrastructure Pentest</strong> — Full port scan (all 65535), service version detection, exploit search for each service, SSH/FTP brute-force, privilege escalation checks, cloud metadata probing, container escape testing. <span className="text-[#a855f7]/80">Enter an IP address or hostname as target.</span>
+                      </div>
+                    </div>
+                  )}
+                  {formData.scanMode === 'smartcontract' && (
+                    <div className="flex items-start gap-2 p-3 rounded-lg border border-cyan-500/30 bg-cyan-500/5 mt-2">
+                      <Code className="w-4 h-4 text-cyan-400 mt-0.5 flex-shrink-0" />
+                      <div className="text-xs text-cyan-300 leading-relaxed">
+                        <strong>Smart Contract Audit</strong> — Solidity/EVM analysis with Slither (static, 92+ detectors) + Mythril (symbolic execution). Detects: reentrancy, integer overflow, access control, flash loan vectors, front-running, oracle manipulation, delegatecall injection, storage collision. <span className="text-cyan-400/80">Enter contract address (Etherscan) or GitHub repo URL with Solidity code.</span>
                       </div>
                     </div>
                   )}
@@ -3995,7 +4006,7 @@ function CreateTestModal({ onClose }: { onClose: () => void }) {
                   <div>
                     <p className="text-xs text-[#8c8c8c] mb-1">Scan Mode</p>
                     <p className={cn("text-sm font-medium", formData.scanMode === 'redteam' ? "text-red-400" : "text-[#d4d4d4]")}>
-                      {formData.scanMode === 'standard' ? 'Standard Scan' : formData.scanMode === 'infra' ? 'Infrastructure' : 'Deep + Exploit'}
+                      {formData.scanMode === 'standard' ? 'Standard Scan' : formData.scanMode === 'infra' ? 'Infrastructure' : formData.scanMode === 'smartcontract' ? 'Smart Contract Audit' : 'Deep + Exploit'}
                     </p>
                   </div>
                 </div>
