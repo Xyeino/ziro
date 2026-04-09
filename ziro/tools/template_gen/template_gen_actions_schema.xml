@@ -1,0 +1,28 @@
+<tool name="generate_nuclei_template">
+  <description>
+Generate a custom nuclei YAML template to test specific vulnerability patterns.
+
+Use when you discover a vulnerability on one endpoint and want to systematically
+test ALL similar endpoints. The template can be saved and executed with nuclei.
+
+Examples:
+- Found IDOR on /api/users/1 → generate template to test /api/users/{{id}} with different IDs
+- Found SQLi on search param → generate template testing all search endpoints
+- Found missing auth on /admin → generate template checking all admin paths
+
+The generated YAML can be saved to a file and run with:
+  nuclei -u TARGET -t /tmp/nuclei-custom/template-id.yaml
+  </description>
+  <parameters>
+    <parameter name="template_id" type="string" required="true">Unique template ID (e.g. 'custom-idor-users')</parameter>
+    <parameter name="name" type="string" required="true">Human-readable name</parameter>
+    <parameter name="severity" type="string" required="false">critical, high, medium, low, info (default: high)</parameter>
+    <parameter name="description" type="string" required="false">What this template detects</parameter>
+    <parameter name="method" type="string" required="false">HTTP method: GET, POST, PUT, DELETE</parameter>
+    <parameter name="path" type="string" required="false">URL path (e.g. '/api/users/{{user_id}}')</parameter>
+    <parameter name="headers" type="object" required="false">Custom headers dict</parameter>
+    <parameter name="body" type="string" required="false">Request body for POST/PUT</parameter>
+    <parameter name="matchers" type="array" required="false">Matcher configs: [{type:'status',status:[200]}, {type:'word',words:['admin']}]</parameter>
+    <parameter name="extractors" type="array" required="false">Extractor configs: [{type:'regex',regex:['token: (.+)']}]</parameter>
+  </parameters>
+</tool>

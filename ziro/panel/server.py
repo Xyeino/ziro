@@ -26,7 +26,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -1682,6 +1682,11 @@ async def create_scan(req: CreateScanRequest) -> dict[str, Any]:
             "- Missing headers → Add HSTS, CSP, X-Frame-Options, X-Content-Type\n"
             "- Race condition → Database-level locks or unique constraints\n"
             "Include specific code examples when possible.\n"
+            "14. CUSTOM TEMPLATE GENERATION:\n"
+            "When you find a vulnerability pattern, use generate_nuclei_template() to create\n"
+            "a custom scanner template. Then run it against ALL similar endpoints.\n"
+            "Example: found IDOR on /api/users/1 → generate template → scan /api/users/{1..100}\n"
+            "This turns a single finding into systematic coverage.\n"
             "=== END ADVANCED TECHNIQUES ==="
         )
 
@@ -1876,7 +1881,7 @@ async def create_scan(req: CreateScanRequest) -> dict[str, Any]:
         tracer.set_scan_config(scan_config)
         set_global_tracer(tracer)
 
-        llm_config = LLMConfig(scan_mode=req.scan_mode)
+        llm_config = LLMConfig(scan_mode=req.scan_mode, interactive=True)
         agent_config = {
             "llm_config": llm_config,
             "max_iterations": 300,
@@ -2673,8 +2678,34 @@ _action_log: list[dict[str, Any]] = []
 
 @app.get("/api/actions")
 async def get_action_log() -> dict[str, Any]:
-    """Get recorded agent actions for playback."""
-    return {"actions": _action_log[-200:], "total": len(_action_log)}
+    """Get recorded agent actions for playback timeline."""
+    # Auto-build from tool executions if _action_log is empty
+    if not _action_log:
+        tracer = get_global_tracer()
+        if tracer:
+            for tex in sorted(tracer.tool_executions.values(), key=lambda t: t.get("started_at", "")):
+                agent_id = tex.get("agent_id", "")
+                node = _agent_graph.get("nodes", {}).get(agent_id, {})
+                result_data = tex.get("result", {})
+                result_preview = ""
+                if isinstance(result_data, dict):
+                    result_preview = str(result_data.get("content", "") or result_data.get("message", ""))[:200]
+                _action_log.append({
+                    "timestamp": tex.get("started_at", ""),
+                    "agent_id": agent_id,
+                    "agent_name": node.get("name", agent_id),
+                    "type": tex.get("tool_name", ""),
+                    "details": _summarize_args(tex.get("args", {})),
+                    "result": result_preview,
+                    "status": tex.get("status", ""),
+                    "duration_ms": 0,
+                })
+
+    return {
+        "actions": _action_log[-500:],
+        "total": len(_action_log),
+        "duration_seconds": 0,
+    }
 
 
 def record_action(agent_id: str, action_type: str, details: str, screenshot: str = "") -> None:
@@ -2818,6 +2849,91 @@ async def update_settings(req: dict[str, Any]) -> dict[str, Any]:
         "configured_count": sum(1 for v in _api_keys.values() if v),
         "ultra_mode": _panel_settings.get("ultra_mode", False),
     }
+
+
+# --- Distributed Scanning ---
+
+@app.get("/api/sandbox/info")
+async def get_sandbox_info() -> dict[str, Any]:
+    """Get info about running sandbox containers."""
+    try:
+        result = subprocess.run(
+            ["docker", "ps", "--filter", "name=ziro-scan-", "--format", "{{.ID}}\t{{.Names}}\t{{.Status}}\t{{.Ports}}"],
+            capture_output=True, text=True, timeout=5,
+        )
+        containers = []
+        for line in result.stdout.strip().split("\n"):
+            if line.strip():
+                parts = line.split("\t")
+                containers.append({
+                    "id": parts[0] if len(parts) > 0 else "",
+                    "name": parts[1] if len(parts) > 1 else "",
+                    "status": parts[2] if len(parts) > 2 else "",
+                    "ports": parts[3] if len(parts) > 3 else "",
+                })
+        return {"containers": containers, "count": len(containers)}
+    except Exception:
+        return {"containers": [], "count": 0}
+
+
+# --- WebSocket (real-time collaborative updates) ---
+
+_ws_clients: list[WebSocket] = []
+
+
+@app.websocket("/ws")
+async def websocket_endpoint(ws: WebSocket) -> None:
+    """Real-time updates via WebSocket. Replaces polling for connected clients."""
+    await ws.accept()
+    _ws_clients.append(ws)
+    try:
+        while True:
+            # Send updates every 2 seconds
+            try:
+                tracer = get_global_tracer()
+                status_data = {}
+                if tracer:
+                    metadata = tracer.run_metadata
+                    vuln_count = len(tracer.vulnerability_reports)
+                    sev_counts: dict[str, int] = {}
+                    for v in tracer.vulnerability_reports:
+                        s = v.get("severity", "info").lower()
+                        sev_counts[s] = sev_counts.get(s, 0) + 1
+                    status_data = {
+                        "type": "status",
+                        "status": metadata.get("status", "unknown"),
+                        "vuln_count": vuln_count,
+                        "severity_counts": sev_counts,
+                        "agent_count": len(_agent_graph.get("nodes", {})),
+                        "tool_count": len(tracer.tool_executions),
+                    }
+                    # Check for new vulns
+                    latest_vulns = tracer.vulnerability_reports[-3:] if tracer.vulnerability_reports else []
+                    if latest_vulns:
+                        status_data["latest_vulns"] = [
+                            {"title": v.get("title", ""), "severity": v.get("severity", "")}
+                            for v in latest_vulns
+                        ]
+
+                await ws.send_json(status_data)
+                await asyncio.sleep(2)
+            except Exception:
+                break
+    except WebSocketDisconnect:
+        pass
+    finally:
+        if ws in _ws_clients:
+            _ws_clients.remove(ws)
+
+
+async def _broadcast_ws(data: dict[str, Any]) -> None:
+    """Send data to all connected WebSocket clients."""
+    for ws in list(_ws_clients):
+        try:
+            await ws.send_json(data)
+        except Exception:
+            if ws in _ws_clients:
+                _ws_clients.remove(ws)
 
 
 # --- Reconnaissance ---
