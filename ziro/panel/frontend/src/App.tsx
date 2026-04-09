@@ -130,7 +130,7 @@ export default function App() {
       <div className="flex-1 flex flex-col min-w-0">
         <Header scanStatus={scanStatus} connected={connected} llmStats={llmStats} />
         <main className="flex-1 overflow-y-auto p-6 lg:p-8 custom-scrollbar">
-          {activeTab === 'Tests' ? <Dashboard liveAgents={liveAgents} liveVulns={liveVulns} /> : activeTab === 'Agent Terminal' ? <AgentTerminal /> : activeTab === 'Target Overview' ? <TargetOverview scanStatus={scanStatus} /> : activeTab === 'Vulnerabilities' ? <Vulnerabilities liveVulns={liveVulns} /> : activeTab === 'Attack Surface' ? <AttackSurface /> : activeTab === 'Screenshots' ? <ScreenshotsGallery /> : activeTab === 'MITRE ATT&CK' ? <MitreHeatmap /> : activeTab === 'HTTP Log' ? <HttpRequestLog /> : activeTab === 'AI Chat' ? <AiChat /> : activeTab === 'Compliance' ? <CompliancePage /> : activeTab === 'History' ? <HistoryPage /> : activeTab === 'Settings' ? <SettingsPage /> : <div className="text-[#8c8c8c] flex items-center justify-center h-full">Section under development</div>}
+          {activeTab === 'Tests' ? <Dashboard liveAgents={liveAgents} liveVulns={liveVulns} /> : activeTab === 'Agent Terminal' ? <AgentTerminal /> : activeTab === 'Target Overview' ? <TargetOverview scanStatus={scanStatus} /> : activeTab === 'Vulnerabilities' ? <Vulnerabilities liveVulns={liveVulns} /> : activeTab === 'Attack Surface' ? <AttackSurface /> : activeTab === 'Screenshots' ? <ScreenshotsGallery /> : activeTab === 'MITRE ATT&CK' ? <MitreHeatmap /> : activeTab === 'HTTP Log' ? <HttpRequestLog /> : activeTab === 'AI Chat' ? <AiChat /> : activeTab === 'Compliance' ? <CompliancePage /> : activeTab === 'History' ? <HistoryPage /> : activeTab === 'Replay' ? <ReplayPage /> : activeTab === 'Settings' ? <SettingsPage /> : <div className="text-[#8c8c8c] flex items-center justify-center h-full">Section under development</div>}
         </main>
       </div>
 
@@ -152,6 +152,7 @@ function Sidebar({ onNewTask, activeTab, setActiveTab }: { onNewTask: () => void
     { icon: Layers, label: 'HTTP Log' },
     { icon: AtSign, label: 'AI Chat' },
     { icon: Clock, label: 'History' },
+    { icon: Activity, label: 'Replay' },
     { icon: Settings, label: 'Settings' },
   ];
 
@@ -3033,6 +3034,179 @@ function CompliancePage() {
             )}
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+// --- Replay Page ---
+
+function ReplayPage() {
+  const [actions, setActions] = useState<any[]>([]);
+  const [playing, setPlaying] = useState(false);
+  const [currentIdx, setCurrentIdx] = useState(-1);
+  const [speed, setSpeed] = useState(1);
+  const timelineRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const load = async () => {
+      const res = await api.getActions();
+      if (res) setActions(res.actions);
+    };
+    load();
+    const id = setInterval(load, 5000);
+    return () => clearInterval(id);
+  }, []);
+
+  // Auto-play
+  useEffect(() => {
+    if (!playing || currentIdx >= actions.length - 1) {
+      if (currentIdx >= actions.length - 1) setPlaying(false);
+      return;
+    }
+    const timer = setTimeout(() => setCurrentIdx(prev => prev + 1), 1500 / speed);
+    return () => clearTimeout(timer);
+  }, [playing, currentIdx, speed, actions.length]);
+
+  // Auto-scroll to current
+  useEffect(() => {
+    if (timelineRef.current && currentIdx >= 0) {
+      const el = timelineRef.current.children[currentIdx] as HTMLElement;
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [currentIdx]);
+
+  const formatTime = (ts: string) => {
+    if (!ts) return '';
+    try { return new Date(ts).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }); }
+    catch { return ''; }
+  };
+
+  const getTypeColor = (type: string) => {
+    const t = type.toLowerCase();
+    if (t.includes('browser') || t.includes('navigate')) return 'border-green-500/40 bg-green-500/5';
+    if (t.includes('terminal') || t.includes('bash')) return 'border-blue-500/40 bg-blue-500/5';
+    if (t.includes('python')) return 'border-yellow-500/40 bg-yellow-500/5';
+    if (t.includes('vuln') || t.includes('report')) return 'border-red-500/40 bg-red-500/5';
+    if (t.includes('proxy') || t.includes('request')) return 'border-[#a855f7]/40 bg-[#a855f7]/5';
+    return 'border-[#333] bg-[#111]';
+  };
+
+  const getTypeIcon = (type: string) => {
+    const t = type.toLowerCase();
+    if (t.includes('browser')) return '🌐';
+    if (t.includes('terminal') || t.includes('bash')) return '>';
+    if (t.includes('python')) return '#';
+    if (t.includes('vuln') || t.includes('report')) return '!';
+    if (t.includes('proxy') || t.includes('request')) return '~';
+    if (t.includes('agent') || t.includes('create')) return '+';
+    if (t.includes('todo')) return 'v';
+    return '.';
+  };
+
+  const progress = actions.length > 0 ? ((currentIdx + 1) / actions.length) * 100 : 0;
+
+  return (
+    <div className="h-full flex flex-col animate-in fade-in duration-300 -m-6 lg:-m-8">
+      {/* Header */}
+      <div className="px-5 py-3 bg-[#111] border-b border-[#222] flex items-center justify-between flex-shrink-0">
+        <div className="flex items-center gap-3">
+          <Activity className="w-4 h-4 text-[#a855f7]" />
+          <span className="text-sm font-medium text-[#f2f2f2]">Attack Replay</span>
+          <span className="text-xs text-[#666]">{actions.length} actions recorded</span>
+        </div>
+        <div className="flex items-center gap-2">
+          {/* Speed control */}
+          <div className="flex items-center gap-1 bg-[#0a0a0a] rounded p-0.5 border border-[#222]">
+            {[0.5, 1, 2, 4].map(s => (
+              <button key={s} onClick={() => setSpeed(s)} className={cn("px-2 py-0.5 rounded text-[10px] font-mono", speed === s ? "bg-[#a855f7] text-white" : "text-[#666] hover:text-[#999]")}>
+                {s}x
+              </button>
+            ))}
+          </div>
+          {/* Controls */}
+          <button onClick={() => { setCurrentIdx(0); setPlaying(false); }} className="px-2 py-1 text-xs text-[#888] hover:text-[#d4d4d4] border border-[#333] rounded">
+            Reset
+          </button>
+          <button onClick={() => { if (currentIdx < 0) setCurrentIdx(0); setPlaying(!playing); }} className={cn("px-3 py-1 rounded text-xs font-medium", playing ? "bg-red-500/20 text-red-400 border border-red-500/30" : "bg-[#a855f7] text-white")}>
+            {playing ? 'Pause' : currentIdx >= 0 ? 'Resume' : 'Play'}
+          </button>
+        </div>
+      </div>
+
+      {/* Progress bar */}
+      <div className="h-1 bg-[#222] flex-shrink-0">
+        <div className="h-full bg-[#a855f7] transition-all duration-300" style={{ width: `${progress}%` }}></div>
+      </div>
+
+      {/* Timeline */}
+      <div ref={timelineRef} className="flex-1 overflow-y-auto p-4 space-y-1 custom-scrollbar" style={{scrollbarWidth:'none'}}>
+        {actions.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-[#666]">
+            <Activity className="w-12 h-12 mb-4 text-[#333]" />
+            <p className="text-sm">No actions recorded yet</p>
+            <p className="text-xs mt-1 text-[#555]">Run a scan to record agent actions for playback</p>
+          </div>
+        ) : (
+          actions.map((action, i) => {
+            const isCurrent = i === currentIdx;
+            const isPast = i < currentIdx;
+            const isFuture = i > currentIdx && currentIdx >= 0;
+
+            return (
+              <div
+                key={i}
+                onClick={() => { setCurrentIdx(i); setPlaying(false); }}
+                className={cn(
+                  "flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all",
+                  isCurrent ? `${getTypeColor(action.type)} ring-1 ring-[#a855f7]/50` :
+                  isPast ? "border-[#1a1a1a] bg-[#0d0d0d] opacity-60" :
+                  isFuture ? "border-[#1a1a1a] bg-[#0a0a0a] opacity-30" :
+                  "border-[#222] bg-[#111] hover:border-[#333]"
+                )}
+              >
+                {/* Step number */}
+                <div className={cn("w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-mono font-bold",
+                  isCurrent ? "bg-[#a855f7] text-white" : isPast ? "bg-[#222] text-[#666]" : "bg-[#1a1a1a] text-[#444]"
+                )}>
+                  {getTypeIcon(action.type)}
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-[#555] font-mono">{formatTime(action.timestamp)}</span>
+                    <span className="text-xs font-medium text-[#a855f7]">{action.agent_name}</span>
+                    <span className={cn("text-[10px] px-1.5 py-0.5 rounded font-mono",
+                      action.status === 'completed' ? "bg-green-500/10 text-green-400" :
+                      action.status === 'running' ? "bg-yellow-500/10 text-yellow-400" :
+                      "bg-[#222] text-[#666]"
+                    )}>
+                      {action.type}
+                    </span>
+                  </div>
+                  {action.details && (
+                    <p className="text-xs text-[#888] mt-1 truncate">{action.details}</p>
+                  )}
+                  {isCurrent && action.result && (
+                    <pre className="mt-2 p-2 bg-[#0a120a] border border-[#1a2a1a] rounded text-[10px] text-[#6a9a6a] whitespace-pre-wrap break-all max-h-[100px] overflow-hidden">
+                      {action.result}
+                    </pre>
+                  )}
+                </div>
+
+                {/* Step indicator */}
+                <span className="text-[10px] text-[#444] font-mono flex-shrink-0">{i + 1}/{actions.length}</span>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* Footer */}
+      <div className="px-4 py-2 bg-[#111] border-t border-[#222] flex items-center justify-between text-[10px] text-[#666] font-mono flex-shrink-0">
+        <span>{currentIdx >= 0 ? `Step ${currentIdx + 1} of ${actions.length}` : 'Click Play to start'}</span>
+        <span>speed: {speed}x</span>
       </div>
     </div>
   );
