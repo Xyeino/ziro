@@ -64,6 +64,11 @@ class Config:
     ziro_runtime_backend = "docker"
     ziro_sandbox_execution_timeout = "120"
     ziro_sandbox_connect_timeout = "10"
+    # Network isolation mode for sandbox containers:
+    #   unset / 'none' / 'off' — legacy 0.0.0.0 publish (panel reachable over any iface)
+    #   'loopback' / '127.0.0.1' — tool server bound to 127.0.0.1 only (recommended)
+    #   'isolated' — no publish at all (future — not yet implemented)
+    ziro_sandbox_isolation = None
 
     # Telemetry
     ziro_telemetry = "1"
