@@ -130,6 +130,19 @@ RUN apt-get install -y wapiti
 # Feroxbuster (fast Rust content discovery)
 RUN curl -sL https://raw.githubusercontent.com/epi052/feroxbuster/main/install-nix.sh | bash -s /usr/local/bin
 
+# Sliver C2 client (post-exploitation command & control)
+# Installs the client binary only — the team server is optional and runs in
+# a separate docker-compose service when ZIRO_SLIVER_SERVER_URL is set.
+RUN ARCH=$(dpkg --print-architecture) && \
+    case "$ARCH" in \
+        amd64) SLIVER_ARCH=linux ;; \
+        arm64) SLIVER_ARCH=linux-arm64 ;; \
+        *) SLIVER_ARCH=linux ;; \
+    esac && \
+    curl -sSfL "https://github.com/BishopFox/sliver/releases/latest/download/sliver-client_${SLIVER_ARCH}" \
+        -o /usr/local/bin/sliver-client && \
+    chmod +x /usr/local/bin/sliver-client || true
+
 USER pentester
 
 

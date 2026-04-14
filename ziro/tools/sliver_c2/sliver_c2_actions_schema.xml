@@ -1,0 +1,143 @@
+<tools>
+  <tool name="sliver_connect">
+    <description>Connect to the Sliver C2 team server via a persistent sliver-client session inside the sandbox.
+
+Prerequisites: The team server must be running (see containers/sliver-compose.yml) and the operator config must be available inside the sandbox. Set ZIRO_SLIVER_SERVER_URL and ZIRO_SLIVER_OPERATOR_CFG before scanning.
+
+Safe to call multiple times — reuses an existing session if alive. Returns the session info and current prompt state.</description>
+    <parameters></parameters>
+    <returns type="Dict[str, Any]">
+      <description>Success flag, session info (alive, uptime_sec), reused flag.</description>
+    </returns>
+  </tool>
+
+  <tool name="sliver_command">
+    <description>Send a raw command to the active Sliver console session.
+
+Use this for one-off commands that don't have a typed wrapper (help, version, armory, search, aliases, extensions, licenses, monitor). The console must be connected first via sliver_connect.</description>
+    <parameters>
+      <parameter name="command" type="string" required="true">
+        <description>Raw sliver console command (e.g., "help", "sessions", "jobs", "version", "armory").</description>
+      </parameter>
+      <parameter name="wait_seconds" type="number" required="false">
+        <description>Max seconds to wait for the prompt to return. Default 10.</description>
+      </parameter>
+    </parameters>
+  </tool>
+
+  <tool name="generate_implant">
+    <description>Generate a Sliver implant (session or beacon) for a target OS/architecture.
+
+Wraps the `generate` command with typed arguments so you don't have to remember the exact sliver syntax. Requires a listener to already be running via start_listener().
+
+Session mode (beacon=false): implant creates a persistent session that maintains an open connection. Use for interactive post-exploitation.
+
+Beacon mode (beacon=true): implant periodically checks in at beacon_interval_seconds (with jitter). Use for stealth and long dwell time.
+
+IMPORTANT: Only generate and deploy implants on targets authorized by the Rules of Engagement. See create_roe.</description>
+    <parameters>
+      <parameter name="name" type="string" required="true">
+        <description>Name for the implant (used as filename prefix and internal identifier).</description>
+      </parameter>
+      <parameter name="target_os" type="string" required="false">
+        <description>linux, windows, or darwin. Default linux.</description>
+      </parameter>
+      <parameter name="target_arch" type="string" required="false">
+        <description>amd64, 386, or arm64. Default amd64.</description>
+      </parameter>
+      <parameter name="protocol" type="string" required="false">
+        <description>C2 protocol: mtls, https, http, dns, wg. Default https.</description>
+      </parameter>
+      <parameter name="callback_host" type="string" required="true">
+        <description>The C2 server hostname or IP the implant will call back to.</description>
+      </parameter>
+      <parameter name="callback_port" type="integer" required="true">
+        <description>The C2 server port.</description>
+      </parameter>
+      <parameter name="format_type" type="string" required="false">
+        <description>Output format: exe, shared (DLL/.so/.dylib), service, shellcode. Default exe.</description>
+      </parameter>
+      <parameter name="output_dir" type="string" required="false">
+        <description>Absolute path inside the sandbox where the binary is saved. Default /workspace/implants.</description>
+      </parameter>
+      <parameter name="beacon" type="boolean" required="false">
+        <description>If true, generates a beacon instead of a session. Default false.</description>
+      </parameter>
+      <parameter name="beacon_interval_seconds" type="integer" required="false">
+        <description>Seconds between beacon check-ins. Default 60.</description>
+      </parameter>
+      <parameter name="beacon_jitter_seconds" type="integer" required="false">
+        <description>Random jitter added to beacon_interval. Default 30.</description>
+      </parameter>
+    </parameters>
+    <returns type="Dict[str, Any]">
+      <description>Success flag, implant_name, saved_path (absolute path to binary), buffer_tail with sliver output, command executed.</description>
+    </returns>
+  </tool>
+
+  <tool name="start_listener">
+    <description>Start a Sliver listener to receive implant callbacks.
+
+Common choices:
+- mtls (port 8888): mutual TLS — most secure, recommended for real ops
+- https (port 8443): HTTPS — good for blending with normal traffic
+- http (port 8080): plain HTTP — testing only, never production
+- dns (no port): DNS tunnel — stealthy but very slow, requires domain
+- wg: WireGuard</description>
+    <parameters>
+      <parameter name="protocol" type="string" required="true">
+        <description>Listener protocol: mtls, https, http, dns, wg.</description>
+      </parameter>
+      <parameter name="host" type="string" required="false">
+        <description>Bind host for the listener. Default 0.0.0.0.</description>
+      </parameter>
+      <parameter name="port" type="integer" required="false">
+        <description>Listener port. Defaults: mtls=8888, https=8443, http=8080, wg=53.</description>
+      </parameter>
+      <parameter name="domain" type="string" required="false">
+        <description>Required for DNS listeners — the controlled domain with NS records pointing to this listener.</description>
+      </parameter>
+    </parameters>
+  </tool>
+
+  <tool name="list_sessions_and_beacons">
+    <description>List all active Sliver sessions, beacons, and jobs in one call.
+
+Returns the concatenated output of `sessions`, `beacons`, and `jobs` so you can quickly see the current C2 state without issuing three separate commands.</description>
+    <parameters></parameters>
+    <returns type="Dict[str, Any]">
+      <description>Success flag, outputs dict with keys 'sessions', 'beacons', 'jobs' each containing the raw console text.</description>
+    </returns>
+  </tool>
+
+  <tool name="interact_with_session">
+    <description>Run a single command inside a specific Sliver session or beacon, then return to the server prompt.
+
+Wraps the `use &lt;id&gt; -> command -> background` flow so the session doesn't stay permanently selected. Safe for chained calls.
+
+Common session commands:
+- whoami, pwd, ls, cat /etc/passwd
+- shell (opens interactive shell — use carefully)
+- execute-assembly, execute-shellcode
+- portfwd add --remote host:port --bind 127.0.0.1:port
+- socks5 start
+- download /path/to/file
+- upload local_file /remote/path
+- screenshot, getprivs, getsystem (Windows)
+- psexec, pivots, jobs</description>
+    <parameters>
+      <parameter name="session_id" type="string" required="true">
+        <description>Sliver session or beacon ID (numeric or alphanumeric from the sessions/beacons list).</description>
+      </parameter>
+      <parameter name="command" type="string" required="true">
+        <description>Single command to run inside the selected session.</description>
+      </parameter>
+      <parameter name="wait_seconds" type="number" required="false">
+        <description>Max seconds to wait for each step to complete. Default 30.</description>
+      </parameter>
+    </parameters>
+    <returns type="Dict[str, Any]">
+      <description>Success flag, session_id, steps array with (step, buffer_tail) for each operation.</description>
+    </returns>
+  </tool>
+</tools>
