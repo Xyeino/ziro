@@ -1,0 +1,32 @@
+<tools>
+  <tool name="read_skill">
+    <description>Read the full content of a single skill WITHOUT adding it to the agent's permanent context.
+
+Use this for one-off reference (quick lookup of a payload, a tool's flag, a specific technique) when you don't need the skill to stay loaded across future iterations. The body is returned in THIS tool result only and is NOT baked into the system prompt.
+
+For specialist sub-agents that will reference a skill repeatedly, use `load_skill` instead — that one persists the skill into the agent's prompt for the rest of the session.</description>
+    <details>Accepts exactly one skill name. Returns the skill's metadata (category, description, MITRE techniques, kill chain phases, related skills) and the full body text.
+
+Typical use cases:
+- You're already mid-exploit and just need to remember a specific payload
+- Quick lookup of tool syntax before a one-shot command
+- Reference a related skill mentioned in frontmatter without committing context budget</details>
+    <parameters>
+      <parameter name="skill" type="string" required="true">
+        <description>Single skill name to read (e.g., `sql_injection`, `telegram_mini_app`). Case-sensitive, must match an entry in the skills_catalog shown in your system prompt.</description>
+      </parameter>
+    </parameters>
+    <returns type="Dict[str, Any]">
+      <description>Response containing: - success: Whether the read succeeded - skill: The skill name - category: Parent category (vulnerabilities, technologies, frameworks, etc.) - description: One-line frontmatter description - mitre_techniques: List of MITRE ATT&CK technique IDs declared in frontmatter - kill_chain_phases: Kill chain phases the skill covers - related_skills: Suggested companion skills - body: The full skill markdown content (frontmatter stripped) - note: Reminder that the read is one-off and not persisted</description>
+    </returns>
+    <examples>
+  <function=read_skill>
+  <parameter=skill>telegram_mini_app</parameter>
+  </function>
+
+  <function=read_skill>
+  <parameter=skill>ssrf</parameter>
+  </function>
+    </examples>
+  </tool>
+</tools>

@@ -144,12 +144,24 @@ class LLM:
             skill_content = load_skills(skills_to_load)
             env.globals["get_skill"] = lambda name: skill_content.get(name, "")
 
+            # Progressive skill disclosure: inject a compact index of all
+            # available skills (names, descriptions, MITRE tags, phases)
+            # so the agent can choose what to read via load_skill at runtime,
+            # instead of paying the cost of bundling every body upfront.
+            from ziro.skills import generate_skills_index
+
+            try:
+                skills_catalog = generate_skills_index(include_phase=True)
+            except Exception:  # noqa: BLE001
+                skills_catalog = None
+
             result = env.get_template("system_prompt.jinja").render(
                 get_tools_prompt=get_tools_prompt,
                 loaded_skill_names=list(skill_content.keys()),
                 interactive=self.config.interactive,
                 system_prompt_context=self._system_prompt_context,
                 threat_actor_prompt=getattr(self.config, "threat_actor_prompt", None),
+                skills_catalog=skills_catalog,
                 **skill_content,
             )
             if getattr(self.config, "threat_actor_prompt", None):

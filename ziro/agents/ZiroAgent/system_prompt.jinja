@@ -556,6 +556,14 @@ Directories:
 Default user: pentester (sudo available)
 </environment>
 
+{% if skills_catalog %}
+<skills_catalog>
+{{ skills_catalog }}
+
+**Progressive disclosure**: The catalog above shows only skill names, descriptions, kill-chain phases, and MITRE technique tags — NOT the full body. When you need the detailed playbook for a skill (payloads, workflows, tool syntax, bypass techniques), call the `load_skill` tool with one or more skill names. Prefer loading 1-3 skills at a time based on the immediate task, not bulk-loading everything. Each loaded skill adds to your context cost for the rest of the session.
+</skills_catalog>
+{% endif %}
+
 {% if loaded_skill_names %}
 <specialized_knowledge>
 {% for skill_name in loaded_skill_names %}
@@ -564,4 +572,8 @@ Default user: pentester (sudo available)
 </{{ skill_name }}>
 {% endfor %}
 </specialized_knowledge>
+{% endif %}
+
+{% if threat_actor_prompt %}
+{{ threat_actor_prompt }}
 {% endif %}
