@@ -1,10 +1,11 @@
 import contextlib
+import logging
 import os
 import secrets
 import socket
 import time
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 
 import docker
 import httpx
@@ -14,6 +15,8 @@ from requests.exceptions import ConnectionError as RequestsConnectionError
 from requests.exceptions import Timeout as RequestsTimeout
 
 from ziro.config import Config
+
+logger = logging.getLogger(__name__)
 
 from . import SandboxInitializationError
 from .runtime import AbstractRuntime, SandboxInfo
@@ -166,18 +169,65 @@ class DockerRuntime(AbstractRuntime):
                 self._tool_server_token = secrets.token_urlsafe(32)
                 execution_timeout = Config.get("ziro_sandbox_execution_timeout") or "120"
 
+                # Network isolation mode — opt-in bind host for the tool server
+                # port.
+                #
+                #  ZIRO_SANDBOX_ISOLATION unset / 'none'   — legacy: bind to 0.0.0.0
+                #                                             (panel reachable from any iface)
+                #  ZIRO_SANDBOX_ISOLATION=loopback         — bind to 127.0.0.1 only
+                #                                             (panel must run on same host)
+                #  ZIRO_SANDBOX_ISOLATION=isolated         — future: no publish at all,
+                #                                             all tool_server traffic routed via
+                #                                             docker exec. Raises NotImplementedError
+                #                                             until the socket-exec HTTP client is wired in.
+                #
+                # Loopback mode is the recommended default for production: it eliminates
+                # cross-network exposure of the agent's control channel (tool_server auth
+                # token, command execution endpoint) while keeping the existing HTTP
+                # transport intact.
+                isolation_mode = (Config.get("ziro_sandbox_isolation") or "").strip().lower()
+                bind_host = ""
+                if isolation_mode in ("loopback", "local", "127", "127.0.0.1"):
+                    bind_host = "127.0.0.1"
+                elif isolation_mode == "isolated":
+                    raise SandboxInitializationError(
+                        "ZIRO_SANDBOX_ISOLATION=isolated is not yet implemented",
+                        "Full no-publish isolation requires routing all tool_server "
+                        "HTTP calls through docker exec. Use ZIRO_SANDBOX_ISOLATION=loopback "
+                        "for the supported path that binds the tool_server to 127.0.0.1 only.",
+                    )
+                elif isolation_mode and isolation_mode not in ("none", "off", "disabled"):
+                    logger.warning(
+                        "Unknown ZIRO_SANDBOX_ISOLATION=%r — falling back to default (0.0.0.0)",
+                        isolation_mode,
+                    )
+
+                if bind_host:
+                    port_map: dict[str, Any] = {
+                        f"{CONTAINER_TOOL_SERVER_PORT}/tcp": (bind_host, self._tool_server_port),
+                        f"{CONTAINER_CAIDO_PORT}/tcp": (bind_host, self._caido_port),
+                    }
+                    logger.info(
+                        "Sandbox isolation=loopback — tool server bound to %s only", bind_host
+                    )
+                else:
+                    port_map = {
+                        f"{CONTAINER_TOOL_SERVER_PORT}/tcp": self._tool_server_port,
+                        f"{CONTAINER_CAIDO_PORT}/tcp": self._caido_port,
+                    }
+
                 container = self.client.containers.run(
                     image_name,
                     command="sleep infinity",
                     detach=True,
                     name=container_name,
                     hostname=container_name,
-                    ports={
-                        f"{CONTAINER_TOOL_SERVER_PORT}/tcp": self._tool_server_port,
-                        f"{CONTAINER_CAIDO_PORT}/tcp": self._caido_port,
-                    },
+                    ports=port_map,
                     cap_add=["NET_ADMIN", "NET_RAW"],
-                    labels={"ziro-scan-id": scan_id},
+                    labels={
+                        "ziro-scan-id": scan_id,
+                        "ziro-isolation": isolation_mode or "none",
+                    },
                     environment={
                         "PYTHONUNBUFFERED": "1",
                         "TOOL_SERVER_PORT": str(CONTAINER_TOOL_SERVER_PORT),
