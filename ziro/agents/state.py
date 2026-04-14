@@ -24,6 +24,8 @@ class AgentState(BaseModel):
     stop_requested: bool = False
     waiting_for_input: bool = False
     llm_failed: bool = False
+    consecutive_llm_failures: int = 0
+    max_consecutive_llm_failures: int = 3
     waiting_start_time: datetime | None = None
     waiting_timeout: int = 600
     final_result: dict[str, Any] | None = None
@@ -123,9 +125,11 @@ class AgentState(BaseModel):
         if not self.waiting_for_input or not self.waiting_start_time:
             return False
 
+        # NOTE: llm_failed is intentionally NOT a guard here. An LLM failure
+        # must not trap the agent in an unbounded wait — the timeout retries
+        # the call (or surfaces the error) instead of hanging the whole swarm.
         if (
             self.stop_requested
-            or self.llm_failed
             or self.completed
             or self.has_reached_max_iterations()
         ):
@@ -133,6 +137,20 @@ class AgentState(BaseModel):
 
         elapsed = (datetime.now(UTC) - self.waiting_start_time).total_seconds()
         return elapsed > self.waiting_timeout
+
+    def record_llm_failure(self) -> None:
+        self.consecutive_llm_failures += 1
+        self.last_updated = datetime.now(UTC).isoformat()
+
+    def record_llm_success(self) -> None:
+        if self.consecutive_llm_failures:
+            self.consecutive_llm_failures = 0
+            self.last_updated = datetime.now(UTC).isoformat()
+
+    def has_exceeded_llm_failure_budget(self) -> bool:
+        if self.max_consecutive_llm_failures <= 0:
+            return False
+        return self.consecutive_llm_failures >= self.max_consecutive_llm_failures
 
     def has_empty_last_messages(self, count: int = 3) -> bool:
         if len(self.messages) < count:

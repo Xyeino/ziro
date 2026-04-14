@@ -377,6 +377,9 @@ class BaseAgent(metaclass=AgentMeta):
         if final_response is None:
             return False
 
+        # LLM call completed without raising — circuit breaker counter resets.
+        self.state.record_llm_success()
+
         content_stripped = (final_response.content or "").strip()
 
         if not content_stripped:
@@ -469,25 +472,19 @@ class BaseAgent(metaclass=AgentMeta):
                         sender_id = message.get("from")
 
                         if state.is_waiting_for_input():
-                            if state.llm_failed:
-                                if sender_id == "user":
-                                    state.resume_from_waiting()
-                                    has_new_messages = True
+                            # Any incoming message (user, parent, or peer) resumes
+                            # the agent. Previously llm_failed agents only resumed
+                            # on user messages, which caused swarm-wide deadlocks
+                            # when a sub-agent's LLM failed while the root was also
+                            # waiting — nobody could break the cycle.
+                            state.resume_from_waiting()
+                            has_new_messages = True
 
-                                    from ziro.telemetry.tracer import get_global_tracer
+                            from ziro.telemetry.tracer import get_global_tracer
 
-                                    tracer = get_global_tracer()
-                                    if tracer:
-                                        tracer.update_agent_status(state.agent_id, "running")
-                            else:
-                                state.resume_from_waiting()
-                                has_new_messages = True
-
-                                from ziro.telemetry.tracer import get_global_tracer
-
-                                tracer = get_global_tracer()
-                                if tracer:
-                                    tracer.update_agent_status(state.agent_id, "running")
+                            tracer = get_global_tracer()
+                            if tracer:
+                                tracer.update_agent_status(state.agent_id, "running")
 
                         if sender_id == "user":
                             sender_name = "User"
@@ -582,8 +579,13 @@ class BaseAgent(metaclass=AgentMeta):
         error_msg = str(error)
         error_details = getattr(error, "details", None)
         self.state.add_error(error_msg)
+        self.state.record_llm_failure()
 
-        if not self.interactive:
+        # Circuit breaker: after N consecutive failures, give up and fail
+        # hard so the parent is notified instead of deadlocking on waiting.
+        budget_exhausted = self.state.has_exceeded_llm_failure_budget()
+
+        if not self.interactive or budget_exhausted:
             self.state.set_completed({"success": False, "error": error_msg})
             if tracer:
                 tracer.update_agent_status(self.state.agent_id, "failed", error_msg)
@@ -594,6 +596,13 @@ class BaseAgent(metaclass=AgentMeta):
                         {"error": error_msg, "details": error_details},
                     )
                     tracer.update_tool_execution(exec_id, "failed", {"details": error_details})
+            if budget_exhausted and self.interactive:
+                logger.error(
+                    "Agent %s exceeded LLM failure budget (%d consecutive failures); "
+                    "failing hard to break deadlock",
+                    self.state.agent_id,
+                    self.state.consecutive_llm_failures,
+                )
             return {"success": False, "error": error_msg}
 
         self.state.enter_waiting_state(llm_failed=True)
