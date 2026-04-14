@@ -616,6 +616,7 @@ try:
                 (r'(?:sk-|pk_live_|pk_test_|rk_live_)([\w]{{20,}})', 'SECRET_KEY'),
                 (r'(?:password|passwd|secret)["\\'\\s:=]+["\\']([^"\\'\\s]{{6,}})["\\'\\s]', 'PASSWORD'),
                 (r'(?:firebase|supabase|appwrite)["\\'\\s:=]+["\\']([\w:/.-]{{20,}})["\\'\\s]', 'SERVICE_KEY'),
+                (r'([0-9]{{9,10}}:[A-Za-z0-9_-]{{35}})', 'TELEGRAM_BOT_TOKEN'),
             ]:
                 for m in re.finditer(pattern, js, re.IGNORECASE):
                     found_secrets.append({{"type": name, "value": m.group(1)[:50], "source": js_url.split("/")[-1]}})
