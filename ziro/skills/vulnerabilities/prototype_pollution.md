@@ -1,6 +1,8 @@
 ---
 name: prototype-pollution
 description: Prototype Pollution testing covering __proto__ and constructor.prototype injection with client-side DOM XSS and server-side RCE techniques
+mitre_techniques: [T1190, T1059.007]
+kill_chain_phases: [initial_access, execution]
 ---
 
 # Prototype Pollution

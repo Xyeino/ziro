@@ -1,6 +1,8 @@
 ---
 name: open-redirect
 description: Open redirect testing for phishing pivots, OAuth token theft, and allowlist bypass
+mitre_techniques: [T1566.002]
+kill_chain_phases: [initial_access]
 ---
 
 # Open Redirect

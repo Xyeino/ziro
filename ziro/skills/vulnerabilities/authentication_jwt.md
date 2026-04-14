@@ -1,6 +1,8 @@
 ---
 name: authentication-jwt
 description: JWT and OIDC security testing covering token forgery, algorithm confusion, and claim manipulation
+mitre_techniques: [T1552.001, T1606, T1528]
+kill_chain_phases: [credential_access, initial_access]
 ---
 
 # Authentication / JWT / OIDC

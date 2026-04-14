@@ -1,6 +1,8 @@
 ---
 name: django
 description: Security testing playbook for Django applications covering ORM injection, admin panel, middleware bypass, and session security
+mitre_techniques: [T1190]
+kill_chain_phases: [initial_access]
 ---
 
 # Django

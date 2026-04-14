@@ -1,6 +1,8 @@
 ---
 name: passive_osint_apis
 description: Direct HTTP queries to public OSINT APIs for subdomain enumeration, certificate transparency, and passive DNS when dedicated tools are unavailable
+mitre_techniques: [T1590, T1589]
+kill_chain_phases: [reconnaissance]
 ---
 
 # Passive OSINT API Reconnaissance

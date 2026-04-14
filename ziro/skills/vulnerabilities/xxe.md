@@ -1,6 +1,8 @@
 ---
 name: xxe
 description: XXE testing for external entity injection, file disclosure, and SSRF via XML parsers
+mitre_techniques: [T1190, T1005]
+kill_chain_phases: [initial_access, collection]
 ---
 
 # XXE

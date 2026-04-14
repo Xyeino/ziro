@@ -1,6 +1,8 @@
 ---
 name: firebase-firestore
 description: Firebase/Firestore security testing covering security rules, Cloud Functions, and client-side trust issues
+mitre_techniques: [T1528, T1552.001]
+kill_chain_phases: [credential_access]
 ---
 
 # Firebase / Firestore

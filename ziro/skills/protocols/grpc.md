@@ -1,6 +1,8 @@
 ---
 name: grpc
 description: gRPC security testing covering reflection enumeration, protobuf manipulation, auth bypass, TLS misconfig, and streaming abuse
+mitre_techniques: [T1190]
+kill_chain_phases: [initial_access]
 ---
 
 # gRPC Security Testing

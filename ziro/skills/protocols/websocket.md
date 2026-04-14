@@ -1,6 +1,8 @@
 ---
 name: websocket
 description: WebSocket protocol security testing covering handshake manipulation, CSWSH, message injection, session hijacking, and Socket.IO specific attacks
+mitre_techniques: [T1190]
+kill_chain_phases: [initial_access]
 ---
 
 # WebSocket Protocol Testing

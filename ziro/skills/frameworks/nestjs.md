@@ -1,6 +1,8 @@
 ---
 name: nestjs
 description: Security testing playbook for NestJS applications covering guards, pipes, decorators, module boundaries, and multi-transport auth
+mitre_techniques: [T1190]
+kill_chain_phases: [initial_access]
 ---
 
 # NestJS

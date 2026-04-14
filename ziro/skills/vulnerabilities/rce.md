@@ -1,6 +1,8 @@
 ---
 name: rce
 description: RCE testing covering command injection, deserialization, template injection, and code evaluation
+mitre_techniques: [T1190, T1059, T1203]
+kill_chain_phases: [initial_access, execution]
 ---
 
 # RCE

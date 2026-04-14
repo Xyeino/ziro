@@ -1,6 +1,8 @@
 ---
 name: business-logic
 description: Business logic testing for workflow bypass, state manipulation, and domain invariant violations
+mitre_techniques: [T1190]
+kill_chain_phases: [initial_access]
 ---
 
 # Business Logic Flaws

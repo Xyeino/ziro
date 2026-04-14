@@ -1,6 +1,8 @@
 ---
 name: subdomain-takeover
 description: Subdomain takeover testing for dangling DNS records and unclaimed cloud resources
+mitre_techniques: [T1584.001, T1190]
+kill_chain_phases: [resource_development, initial_access]
 ---
 
 # Subdomain Takeover

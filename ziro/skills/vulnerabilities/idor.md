@@ -1,6 +1,8 @@
 ---
 name: idor
 description: IDOR/BOLA testing for object-level authorization failures and cross-account data access
+mitre_techniques: [T1087, T1213]
+kill_chain_phases: [discovery, collection]
 ---
 
 # IDOR

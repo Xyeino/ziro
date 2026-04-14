@@ -1,6 +1,8 @@
 ---
 name: mass-assignment
 description: Mass assignment testing for unauthorized field binding and privilege escalation via API parameters
+mitre_techniques: [T1190, T1068]
+kill_chain_phases: [initial_access, privilege_escalation]
 ---
 
 # Mass Assignment

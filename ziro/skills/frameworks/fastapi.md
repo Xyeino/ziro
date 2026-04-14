@@ -1,6 +1,8 @@
 ---
 name: fastapi
 description: Security testing playbook for FastAPI applications covering ASGI, dependency injection, and API vulnerabilities
+mitre_techniques: [T1190]
+kill_chain_phases: [initial_access]
 ---
 
 # FastAPI

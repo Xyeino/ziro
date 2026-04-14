@@ -1,6 +1,8 @@
 ---
 name: http-request-smuggling
 description: HTTP Request Smuggling testing covering CL.TE, TE.CL, TE.TE desync variants, HTTP/2 downgrade, and cache poisoning techniques
+mitre_techniques: [T1190, T1556]
+kill_chain_phases: [initial_access, credential_access]
 ---
 
 # HTTP Request Smuggling

@@ -1,6 +1,8 @@
 ---
 name: information-disclosure
 description: Information disclosure testing covering error messages, debug endpoints, metadata leakage, and source exposure
+mitre_techniques: [T1213, T1083]
+kill_chain_phases: [collection, discovery]
 ---
 
 # Information Disclosure

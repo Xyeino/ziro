@@ -1,6 +1,8 @@
 ---
 name: laravel
 description: Security testing playbook for Laravel applications covering debug exposure, Eloquent injection, mass assignment, session deserialization, and middleware bypass
+mitre_techniques: [T1190]
+kill_chain_phases: [initial_access]
 ---
 
 # Laravel

@@ -1,6 +1,8 @@
 ---
 name: crlf-injection
 description: CRLF injection testing covering HTTP header injection, response splitting, log poisoning, and cache poisoning techniques
+mitre_techniques: [T1190, T1539]
+kill_chain_phases: [initial_access, credential_access]
 ---
 
 # CRLF Injection

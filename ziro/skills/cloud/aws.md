@@ -1,6 +1,8 @@
 ---
 name: aws
 description: AWS security testing covering S3 misconfig, IAM privilege escalation, Lambda injection, EC2 metadata SSRF, Cognito, and secrets exposure
+mitre_techniques: [T1078.004, T1580, T1552.005]
+kill_chain_phases: [credential_access, discovery]
 ---
 
 # AWS Security Testing

@@ -1,6 +1,8 @@
 ---
 name: ssrf
 description: SSRF testing for cloud metadata access, internal service discovery, and protocol smuggling
+mitre_techniques: [T1190, T1552.005]
+kill_chain_phases: [initial_access, credential_access]
 ---
 
 > **OWASP 2025 Update**: SSRF has been consolidated into A01:2025 Broken Access Control, reflecting its role as an access control bypass vector. This elevates SSRF testing priority in all engagements.

@@ -1,6 +1,8 @@
 ---
 name: graphql
 description: GraphQL security testing covering introspection, resolver injection, batching attacks, and authorization bypass
+mitre_techniques: [T1190, T1213]
+kill_chain_phases: [initial_access, collection]
 ---
 
 # GraphQL

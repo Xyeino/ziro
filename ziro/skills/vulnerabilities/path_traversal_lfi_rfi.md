@@ -1,6 +1,8 @@
 ---
 name: path-traversal-lfi-rfi
 description: Path traversal and file inclusion testing for local/remote file access and code execution
+mitre_techniques: [T1083, T1005]
+kill_chain_phases: [discovery, collection]
 ---
 
 # Path Traversal / LFI / RFI

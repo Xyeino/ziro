@@ -1,6 +1,8 @@
 ---
 name: express
 description: Security testing playbook for Express.js applications covering prototype pollution, middleware flaws, NoSQL injection, and template injection
+mitre_techniques: [T1190]
+kill_chain_phases: [initial_access]
 ---
 
 # Express.js

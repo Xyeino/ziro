@@ -1,6 +1,8 @@
 ---
 name: nextjs
 description: Security testing playbook for Next.js covering App Router, Server Actions, RSC, and Edge runtime vulnerabilities
+mitre_techniques: [T1190]
+kill_chain_phases: [initial_access]
 ---
 
 # Next.js

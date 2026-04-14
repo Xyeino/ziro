@@ -1,6 +1,8 @@
 ---
 name: insecure-file-uploads
 description: File upload security testing covering extension bypass, content-type manipulation, and path traversal
+mitre_techniques: [T1190, T1505.003]
+kill_chain_phases: [initial_access, persistence]
 ---
 
 # Insecure File Uploads

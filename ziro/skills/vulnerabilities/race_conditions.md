@@ -1,6 +1,8 @@
 ---
 name: race-conditions
 description: Race condition testing for TOCTOU bugs, double-spend, and concurrent state manipulation
+mitre_techniques: [T1190]
+kill_chain_phases: [initial_access]
 ---
 
 # Race Conditions

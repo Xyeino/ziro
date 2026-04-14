@@ -1,6 +1,8 @@
 ---
 name: xss
 description: XSS testing covering reflected, stored, and DOM-based vectors with CSP bypass techniques
+mitre_techniques: [T1059.007, T1539]
+kill_chain_phases: [execution, credential_access]
 ---
 
 # XSS

@@ -1,6 +1,8 @@
 ---
 name: flask
 description: Security testing playbook for Flask applications covering Werkzeug debugger, Jinja2 SSTI, client-side sessions, and extension misconfigurations
+mitre_techniques: [T1190]
+kill_chain_phases: [initial_access]
 ---
 
 # Flask

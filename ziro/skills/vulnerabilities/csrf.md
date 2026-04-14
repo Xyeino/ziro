@@ -1,6 +1,8 @@
 ---
 name: csrf
 description: CSRF testing covering token bypass, SameSite cookies, CORS misconfigurations, and state-changing request abuse
+mitre_techniques: [T1566.002]
+kill_chain_phases: [initial_access]
 ---
 
 # CSRF

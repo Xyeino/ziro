@@ -1,6 +1,8 @@
 ---
 name: insecure-deserialization
 description: Insecure deserialization testing covering Java, Python, PHP, and .NET gadget chains with detection, exploitation, and RCE techniques
+mitre_techniques: [T1190, T1059]
+kill_chain_phases: [initial_access, execution]
 ---
 
 # Insecure Deserialization

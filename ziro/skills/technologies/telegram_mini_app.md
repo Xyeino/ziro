@@ -1,6 +1,9 @@
 ---
 name: telegram_mini_app
 description: Telegram Mini App (TMA) security testing — initData HMAC validation, forgery, replay, bot token exposure, postMessage XSS, deep link abuse
+mitre_techniques: [T1190, T1528, T1552.001, T1078, T1539]
+kill_chain_phases: [initial_access, credential_access, reconnaissance]
+related_skills: [authentication_jwt, idor, business_logic, information_disclosure]
 ---
 
 # Telegram Mini App (TMA)

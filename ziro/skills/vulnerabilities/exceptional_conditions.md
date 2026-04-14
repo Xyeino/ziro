@@ -1,6 +1,8 @@
 ---
 name: exceptional_conditions
 description: Testing for mishandled exceptional conditions that leak information, bypass security controls, or cause denial of service (OWASP A10:2025)
+mitre_techniques: [T1499]
+kill_chain_phases: [impact]
 ---
 
 # Mishandling of Exceptional Conditions

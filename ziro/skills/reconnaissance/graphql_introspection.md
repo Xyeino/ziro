@@ -1,6 +1,8 @@
 ---
 name: graphql_introspection
 description: Full GraphQL introspection queries and schema analysis techniques for API reconnaissance
+mitre_techniques: [T1595.003, T1590]
+kill_chain_phases: [reconnaissance]
 ---
 
 # GraphQL Introspection Reconnaissance

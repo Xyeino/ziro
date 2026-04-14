@@ -1,6 +1,8 @@
 ---
 name: cors-misconfiguration
 description: CORS misconfiguration testing covering origin reflection, null origin trust, wildcard with credentials, and subdomain abuse
+mitre_techniques: [T1190, T1213]
+kill_chain_phases: [initial_access, collection]
 ---
 
 # CORS Misconfiguration

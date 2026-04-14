@@ -1,6 +1,8 @@
 ---
 name: websocket-vulnerabilities
 description: WebSocket security testing covering CSWSH, missing authentication, injection via messages, and authorization bypass techniques
+mitre_techniques: [T1190]
+kill_chain_phases: [initial_access]
 ---
 
 # WebSocket Vulnerabilities

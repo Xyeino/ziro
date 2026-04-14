@@ -1,6 +1,8 @@
 ---
 name: broken-function-level-authorization
 description: BFLA testing for action-level authorization failures across endpoints, admin functions, and API operations
+mitre_techniques: [T1068, T1548]
+kill_chain_phases: [privilege_escalation]
 ---
 
 # Broken Function Level Authorization (BFLA)

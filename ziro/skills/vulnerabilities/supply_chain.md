@@ -1,6 +1,8 @@
 ---
 name: supply_chain
 description: Software supply chain attack testing covering dependency confusion, typosquatting, compromised pipelines, and SBOM analysis (OWASP A03:2025)
+mitre_techniques: [T1195, T1195.002]
+kill_chain_phases: [initial_access]
 ---
 
 # Software Supply Chain Failures

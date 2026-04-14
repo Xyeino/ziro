@@ -1,6 +1,8 @@
 ---
 name: kubernetes
 description: Kubernetes security testing covering RBAC misconfig, container escape, secret exposure, network policy gaps, and service account abuse
+mitre_techniques: [T1611, T1613, T1525]
+kill_chain_phases: [privilege_escalation, discovery]
 ---
 
 # Kubernetes Security Testing

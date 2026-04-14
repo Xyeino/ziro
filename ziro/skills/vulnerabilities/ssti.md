@@ -1,6 +1,8 @@
 ---
 name: ssti
 description: Server-Side Template Injection testing covering Jinja2, Twig, Freemarker, Velocity, Pebble, Mako, ERB, and Handlebars with sandbox escape and RCE techniques
+mitre_techniques: [T1221, T1059]
+kill_chain_phases: [execution, initial_access]
 ---
 
 # SSTI

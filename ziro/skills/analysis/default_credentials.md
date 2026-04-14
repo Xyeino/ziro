@@ -1,6 +1,8 @@
 ---
 name: default_credentials
 description: Database of default credentials by vendor/service/device for authentication testing before brute-force.
+mitre_techniques: [T1078.001]
+kill_chain_phases: [credential_access]
 ---
 
 # Default Credentials Reference

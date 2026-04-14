@@ -1,6 +1,8 @@
 ---
 name: wordpress
 description: Security testing playbook for WordPress covering user enumeration, XML-RPC attacks, plugin/theme vulnerabilities, and REST API exploitation
+mitre_techniques: [T1190, T1505.003]
+kill_chain_phases: [initial_access, persistence]
 ---
 
 # WordPress

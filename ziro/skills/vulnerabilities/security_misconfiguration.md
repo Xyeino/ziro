@@ -1,6 +1,8 @@
 ---
 name: security_misconfiguration
 description: Security misconfiguration testing for default credentials, missing headers, exposed services, cloud storage, TLS, and debug endpoints (OWASP A02:2025)
+mitre_techniques: [T1190, T1552]
+kill_chain_phases: [initial_access, credential_access]
 ---
 
 # Security Misconfiguration

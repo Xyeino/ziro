@@ -1,6 +1,8 @@
 ---
 name: sql-injection
 description: SQL injection testing covering union, blind, error-based, and ORM bypass techniques
+mitre_techniques: [T1190, T1059.007]
+kill_chain_phases: [initial_access, execution]
 ---
 
 # SQL Injection

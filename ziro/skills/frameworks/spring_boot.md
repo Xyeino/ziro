@@ -1,6 +1,8 @@
 ---
 name: spring_boot
 description: Security testing playbook for Spring Boot applications covering actuator exposure, SpEL injection, deserialization, and Spring Security misconfiguration
+mitre_techniques: [T1190, T1505.003]
+kill_chain_phases: [initial_access, persistence]
 ---
 
 # Spring Boot

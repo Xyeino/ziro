@@ -1,6 +1,8 @@
 ---
 name: nosql-injection
 description: NoSQL injection testing covering MongoDB, CouchDB, and Redis with operator injection, authentication bypass, and blind extraction techniques
+mitre_techniques: [T1190, T1087]
+kill_chain_phases: [initial_access, discovery]
 ---
 
 # NoSQL Injection
