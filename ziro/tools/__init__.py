@@ -30,6 +30,7 @@ from .registry import (
     tools,
 )
 from .reporting import *  # noqa: F403
+from .sliver_c2 import *  # noqa: F403
 from .terminal import *  # noqa: F403
 from .thinking import *  # noqa: F403
 from .tmux_interactive import *  # noqa: F403

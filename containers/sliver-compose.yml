@@ -1,0 +1,51 @@
+# Optional Sliver C2 team server for post-exploitation workflows.
+#
+# Usage:
+#   docker compose -f containers/sliver-compose.yml up -d
+#   # Extract operator config
+#   docker exec ziro-sliver /opt/sliver-server operator \
+#     --name ziro --lhost localhost --save /root/ziro.cfg
+#   docker cp ziro-sliver:/root/ziro.cfg ./sliver-operator.cfg
+#
+#   # Then point Ziro at the server
+#   export ZIRO_SLIVER_SERVER_URL=localhost:31337
+#   export ZIRO_SLIVER_OPERATOR_CFG=/absolute/path/to/sliver-operator.cfg
+#
+# The sandbox container will mount the operator config into /home/pentester/.sliver-client/configs/
+# when these env vars are set, so the sliver-client inside the sandbox can
+# connect to the team server without additional setup.
+
+services:
+  ziro-sliver:
+    image: ghcr.io/bishopfox/sliver-server:latest
+    container_name: ziro-sliver
+    restart: unless-stopped
+    # mTLS port for operator console, HTTPS for implants, DNS C2, HTTP C2
+    ports:
+      - "31337:31337"   # operator mTLS
+      - "8443:8443"     # HTTPS implant
+      - "8444:8444"     # HTTPS listener
+      - "8080:8080"     # HTTP listener
+    volumes:
+      - sliver-data:/home/sliver/.sliver
+      - sliver-logs:/var/log/sliver
+    # Do NOT publish operator mTLS outside localhost in production
+    networks:
+      - sliver-net
+    # The server starts in daemon mode and awaits operator console connections
+    command: ["daemon", "--lhost", "0.0.0.0", "--lport", "31337"]
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "sliver-server"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  sliver-data:
+    driver: local
+  sliver-logs:
+    driver: local
+
+networks:
+  sliver-net:
+    driver: bridge
