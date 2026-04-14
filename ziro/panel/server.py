@@ -1290,6 +1290,7 @@ class CreateScanRequest(BaseModel):
     known_issues: str = ""
     compliance_requirements: str = ""
     recon_id: str = ""
+    threat_actor: str = ""  # empty = no adversary emulation; names: apt29, apt28, lazarus, fin7, scattered_spider
 
 
 @app.post("/api/scans")
@@ -2111,7 +2112,13 @@ async def create_scan(req: CreateScanRequest) -> dict[str, Any]:
         tracer.set_scan_config(scan_config)
         set_global_tracer(tracer)
 
-        llm_config = LLMConfig(scan_mode=req.scan_mode, interactive=True)
+        # ZIRO_THREAT_ACTOR env var overrides request field when set
+        import os as _os
+
+        _ta = (req.threat_actor or _os.getenv("ZIRO_THREAT_ACTOR") or "").strip() or None
+        llm_config = LLMConfig(
+            scan_mode=req.scan_mode, interactive=True, threat_actor=_ta
+        )
         agent_config = {
             "llm_config": llm_config,
             "max_iterations": 300,

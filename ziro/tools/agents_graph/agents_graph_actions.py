@@ -228,6 +228,7 @@ def create_agent(
     name: str,
     inherit_context: bool = True,
     skills: str | None = None,
+    threat_actor: str | None = None,
 ) -> dict[str, Any]:
     try:
         parent_id = agent_state.agent_id
@@ -253,12 +254,17 @@ def create_agent(
         timeout = None
         scan_mode = "deep"
         interactive = False
+        inherited_threat_actor: str | None = None
         if parent_agent and hasattr(parent_agent, "llm_config"):
             if hasattr(parent_agent.llm_config, "timeout"):
                 timeout = parent_agent.llm_config.timeout
             if hasattr(parent_agent.llm_config, "scan_mode"):
                 scan_mode = parent_agent.llm_config.scan_mode
             interactive = getattr(parent_agent.llm_config, "interactive", False)
+            inherited_threat_actor = getattr(parent_agent.llm_config, "threat_actor", None)
+
+        # Sub-agent threat actor: explicit argument takes precedence over parent's.
+        effective_threat_actor = threat_actor or inherited_threat_actor
 
         state = AgentState(
             task=task,
@@ -273,6 +279,7 @@ def create_agent(
             timeout=timeout,
             scan_mode=scan_mode,
             interactive=interactive,
+            threat_actor=effective_threat_actor,
         )
 
         agent_config = {

@@ -149,8 +149,13 @@ class LLM:
                 loaded_skill_names=list(skill_content.keys()),
                 interactive=self.config.interactive,
                 system_prompt_context=self._system_prompt_context,
+                threat_actor_prompt=getattr(self.config, "threat_actor_prompt", None),
                 **skill_content,
             )
+            if getattr(self.config, "threat_actor_prompt", None):
+                # Append adversary-emulation block if the template did not render it
+                if "Adversary Emulation Mode" not in str(result):
+                    result = str(result) + "\n\n" + self.config.threat_actor_prompt
             return str(result)
         except Exception:  # noqa: BLE001
             logging.getLogger(__name__).error(

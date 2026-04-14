@@ -16,6 +16,7 @@ class LLMConfig:
         interactive: bool = False,
         reasoning_effort: str | None = None,
         system_prompt_context: dict[str, Any] | None = None,
+        threat_actor: str | None = None,
     ):
         resolved_model, self.api_key, self.api_base = resolve_llm_config()
         self.model_name = model_name or resolved_model
@@ -37,3 +38,13 @@ class LLMConfig:
         self.interactive = interactive
         self.reasoning_effort = reasoning_effort
         self.system_prompt_context = system_prompt_context or {}
+
+        self.threat_actor: str | None = threat_actor
+        self.threat_actor_prompt: str | None = None
+        if threat_actor:
+            from ziro.threat_actors import get_threat_actor, render_threat_actor_prompt
+
+            profile = get_threat_actor(threat_actor)
+            if profile:
+                self.threat_actor = profile.name
+                self.threat_actor_prompt = render_threat_actor_prompt(profile)
