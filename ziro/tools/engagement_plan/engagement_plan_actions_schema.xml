@@ -1,0 +1,169 @@
+<tools>
+  <tool name="create_roe">
+    <description>Create the formal Rules of Engagement document for this scan.
+
+Call this FIRST, before any recon or exploitation activity, so every downstream decision can be validated against a written scope. Produces two files in the sandbox: `/workspace/engagement/&lt;slug&gt;/roe.md` (human-readable) and `roe.json` (machine-readable digest).
+
+The RoE is the authoritative authorization statement from the client. If any in-flight operation would exceed the scope defined here, STOP and ask for clarification.</description>
+    <parameters>
+      <parameter name="engagement_name" type="string" required="true">
+        <description>Short name for this engagement (e.g., "acme_q2_webapp_audit"). Used as the slug for the output directory.</description>
+      </parameter>
+      <parameter name="client_name" type="string" required="true">
+        <description>Legal or display name of the client organization.</description>
+      </parameter>
+      <parameter name="authorized_by" type="string" required="true">
+        <description>Name and title of the person at the client who authorized the engagement.</description>
+      </parameter>
+      <parameter name="in_scope" type="list" required="true">
+        <description>List of in-scope targets: domains, IPs, CIDR ranges, application paths, API endpoints. Be specific.</description>
+      </parameter>
+      <parameter name="out_of_scope" type="list" required="true">
+        <description>Explicitly out-of-scope systems. Third-party services, production databases, customer data stores.</description>
+      </parameter>
+      <parameter name="allowed_techniques" type="list" required="false">
+        <description>Optional list of allowed techniques (e.g., "SQL injection testing", "XSS reflection"). Leave empty to allow all standard pentest techniques except forbidden_techniques.</description>
+      </parameter>
+      <parameter name="forbidden_techniques" type="list" required="false">
+        <description>Techniques the client has explicitly forbidden (e.g., "DoS testing", "Credential stuffing with real user accounts").</description>
+      </parameter>
+      <parameter name="testing_window_start" type="string" required="false">
+        <description>ISO timestamp when testing may begin (e.g., "2025-05-01T09:00:00Z").</description>
+      </parameter>
+      <parameter name="testing_window_end" type="string" required="false">
+        <description>ISO timestamp when testing must stop.</description>
+      </parameter>
+      <parameter name="notification_channel" type="string" required="false">
+        <description>Primary comms channel for status updates (Slack channel, email list, Signal group).</description>
+      </parameter>
+      <parameter name="emergency_contact" type="string" required="false">
+        <description>24/7 contact for urgent issues (name, phone, email).</description>
+      </parameter>
+      <parameter name="destructive_actions_allowed" type="boolean" required="false">
+        <description>Whether destructive actions (data deletion, service disruption) are permitted. Default false.</description>
+      </parameter>
+      <parameter name="data_exfiltration_allowed" type="boolean" required="false">
+        <description>Whether actual data exfiltration is permitted. Default false — evidence via screenshots and hashes only.</description>
+      </parameter>
+      <parameter name="social_engineering_allowed" type="boolean" required="false">
+        <description>Whether social engineering (phishing, vishing) is permitted. Default false.</description>
+      </parameter>
+      <parameter name="production_allowed" type="boolean" required="false">
+        <description>Whether production systems are in scope. Default true (operate with care).</description>
+      </parameter>
+      <parameter name="third_party_infrastructure_notice" type="string" required="false">
+        <description>Notice about any third-party services the target depends on and how to handle their discovery.</description>
+      </parameter>
+    </parameters>
+    <returns type="Dict[str, Any]">
+      <description>Success flag, markdown_path, json_path, engagement_slug, and digest dict.</description>
+    </returns>
+  </tool>
+
+  <tool name="create_conops">
+    <description>Create the Concept of Operations — mission, objectives, adversary model, starting posture.
+
+Call this after create_roe. The ConOps answers "what are we simulating, why, and how" and is used by the root agent to stay aligned with the engagement's strategic goals. Writes to `/workspace/engagement/&lt;slug&gt;/conops.md`.</description>
+    <parameters>
+      <parameter name="engagement_name" type="string" required="true">
+        <description>Same name used in create_roe (for slug consistency).</description>
+      </parameter>
+      <parameter name="mission_statement" type="string" required="true">
+        <description>One-paragraph mission statement — why this engagement exists.</description>
+      </parameter>
+      <parameter name="primary_objectives" type="list" required="true">
+        <description>Ordered list of concrete objectives (e.g., "Demonstrate external-to-internal compromise path", "Identify OWASP Top 10 exposures in the customer portal").</description>
+      </parameter>
+      <parameter name="success_criteria" type="list" required="true">
+        <description>What defines a successful engagement — deliverables, findings quality bar, evidence standards.</description>
+      </parameter>
+      <parameter name="threat_actor_profile" type="string" required="false">
+        <description>Name of a threat actor being emulated (apt29, apt28, lazarus, fin7, scattered_spider) or free-form description. Leave empty for generic attacker.</description>
+      </parameter>
+      <parameter name="testing_approach" type="string" required="false">
+        <description>Black-box, grey-box, or white-box; authenticated or unauthenticated.</description>
+      </parameter>
+      <parameter name="assumed_starting_point" type="string" required="false">
+        <description>Where the attacker begins: "external" (internet), "internal_lan", "compromised_user", "supply_chain", etc.</description>
+      </parameter>
+      <parameter name="kill_chain_focus" type="list" required="false">
+        <description>Kill chain phases to prioritize: initial_access, execution, persistence, privilege_escalation, etc. Omit to cover all.</description>
+      </parameter>
+    </parameters>
+    <returns type="Dict[str, Any]">
+      <description>Success flag, path to conops.md, engagement_slug.</description>
+    </returns>
+  </tool>
+
+  <tool name="create_opplan">
+    <description>Create the Operations Plan — phased execution playbook with agents, skills, techniques per phase.
+
+Call this after create_conops. The OPPLAN is the step-by-step plan the root agent executes and that sub-agents reference when starting work. Writes to `/workspace/engagement/&lt;slug&gt;/opplan.md` and a JSON digest.</description>
+    <parameters>
+      <parameter name="engagement_name" type="string" required="true">
+        <description>Same name used in create_roe.</description>
+      </parameter>
+      <parameter name="phases" type="list" required="true">
+        <description>Ordered list of phase dicts. Each phase should include: name, objective, agents, skills, techniques, duration, deliverables. See examples for structure.</description>
+      </parameter>
+      <parameter name="estimated_duration" type="string" required="false">
+        <description>Total estimated duration (e.g., "4 hours", "2 days").</description>
+      </parameter>
+      <parameter name="required_tools" type="list" required="false">
+        <description>Tools the plan depends on (e.g., ["nmap", "sliver", "msfconsole", "sqlmap"]).</description>
+      </parameter>
+      <parameter name="risk_considerations" type="list" required="false">
+        <description>Engagement-specific risks to mitigate (e.g., "Production database — read-only queries only", "Stable business hours — avoid 9am-5pm testing").</description>
+      </parameter>
+      <parameter name="rollback_procedures" type="string" required="false">
+        <description>How to clean up created artifacts, test accounts, persistence, uploaded files at end of engagement.</description>
+      </parameter>
+    </parameters>
+    <returns type="Dict[str, Any]">
+      <description>Success flag, markdown_path, json_path, phase_count.</description>
+    </returns>
+  </tool>
+
+  <tool name="create_deconfliction_plan">
+    <description>Create the Deconfliction Plan — how to coordinate with the blue team and avoid mistaking test activity for real incidents.
+
+Call this after create_opplan if the engagement involves an active blue team, SOC, or incident response team. Defines IOC notification, artifact tagging, and pause conditions. Writes to `/workspace/engagement/&lt;slug&gt;/deconfliction.md`.</description>
+    <parameters>
+      <parameter name="engagement_name" type="string" required="true">
+        <description>Same name used in create_roe.</description>
+      </parameter>
+      <parameter name="concurrent_operations" type="list" required="false">
+        <description>Any other operations or engagements the client has in parallel that might collide.</description>
+      </parameter>
+      <parameter name="blue_team_contacts" type="list" required="false">
+        <description>Blue team / SOC points of contact for deconfliction.</description>
+      </parameter>
+      <parameter name="ioc_notification_plan" type="string" required="false">
+        <description>How test IOCs are shared with defenders in advance so they can distinguish real from simulated.</description>
+      </parameter>
+      <parameter name="test_artifact_tagging" type="string" required="false">
+        <description>Convention for marking every test artifact (files, accounts, payloads) so they are identifiable and cleanable.</description>
+      </parameter>
+      <parameter name="pause_conditions" type="list" required="false">
+        <description>Conditions that require immediate pause and client notification. Defaults to sensible list.</description>
+      </parameter>
+    </parameters>
+    <returns type="Dict[str, Any]">
+      <description>Success flag, path to deconfliction.md, engagement_slug.</description>
+    </returns>
+  </tool>
+
+  <tool name="get_engagement_package">
+    <description>Read the full engagement package (RoE, ConOps, OPPLAN, Deconfliction Plan) back into the current agent's context.
+
+Use this at the start of each phase to re-verify scope, or when a sub-agent needs to see the authoritative boundaries before taking action.</description>
+    <parameters>
+      <parameter name="engagement_slug" type="string" required="true">
+        <description>The slug of the engagement (same as engagement_name passed to create_roe, with special chars replaced).</description>
+      </parameter>
+    </parameters>
+    <returns type="Dict[str, Any]">
+      <description>Full package dict with roe_md, roe_json, conops_md, opplan_md, opplan_json, deconfliction_md. Any missing files are listed in the `missing` field.</description>
+    </returns>
+  </tool>
+</tools>
