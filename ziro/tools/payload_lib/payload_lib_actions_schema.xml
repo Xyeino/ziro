@@ -1,0 +1,43 @@
+<tools>
+  <tool name="list_payload_categories">
+    <description>List all available payload categories in the Ziro library with counts.
+
+Cheap informational call — use when you don't remember what categories exist. Returns name, payload count per category.</description>
+    <parameters></parameters>
+    <returns type="Dict[str, Any]">
+      <description>categories list (category name, count, file path), total_categories, total_payloads.</description>
+    </returns>
+  </tool>
+
+  <tool name="load_payload_list">
+    <description>Load battle-tested payloads from a category in the Ziro payload library.
+
+LLMs regularly invent subtly-broken payloads (wrong quoting, missing escape, ineffective encoding). This tool gives you curated, tested payload lists so you use inputs that are known to work against real targets.
+
+Categories include: sql_injection, xss, ssrf, path_traversal, ssti, command_injection, xxe, open_redirect, nosql_injection. Each file has 30-200 payloads organized by attack technique (error-based, blind, OOB, WAF bypass, etc.) with inline comments explaining the grouping.
+
+Typical workflow:
+1. load_payload_list(category="sql_injection", count=40) — get 40 SQLi payloads
+2. fuzz_request_parameter(request_id="...", parameter="id", payloads=payloads, parameter_location="query")
+3. Inspect high-interest rows, use repeat_request / view_request for details
+
+Use the `contains` filter to narrow: contains="sleep" for time-based SQLi, contains="169.254" for cloud metadata SSRF, contains="php://" for PHP wrappers in path traversal, etc.</description>
+    <parameters>
+      <parameter name="category" type="string" required="true">
+        <description>Payload category: sql_injection, xss, ssrf, path_traversal, ssti, command_injection, xxe, open_redirect, nosql_injection. Call list_payload_categories if unsure.</description>
+      </parameter>
+      <parameter name="count" type="integer" required="false">
+        <description>Max number of payloads to return. Default 50.</description>
+      </parameter>
+      <parameter name="offset" type="integer" required="false">
+        <description>Skip first N payloads (for paging).</description>
+      </parameter>
+      <parameter name="contains" type="string" required="false">
+        <description>Case-insensitive substring filter — only return payloads containing this string. Useful for narrowing to specific techniques (e.g., "sleep" for time-based SQLi, "169.254" for cloud metadata).</description>
+      </parameter>
+    </parameters>
+    <returns type="Dict[str, Any]">
+      <description>category, total_in_category (after filtering), returned count, offset, payloads list, usage note.</description>
+    </returns>
+  </tool>
+</tools>

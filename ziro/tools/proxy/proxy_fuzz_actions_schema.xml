@@ -1,0 +1,64 @@
+<tools>
+  <tool name="fuzz_request_parameter">
+    <description>Replay a captured request many times, swapping one parameter with each payload, score results against baseline.
+
+Faster exploitation loop than manually calling repeat_request in a loop. Takes a captured request_id, a parameter name, a list of payloads, and the parameter location (query/body/header/cookie/path). Sends the baseline (unmodified) request once to establish reference status/size/timing, then replays with each payload substitution, and returns rows sorted by 'interest score'.
+
+Interest heuristic scores:
+- Status code change (+30, +60 for 5xx server errors)
+- Body length delta &gt; 50% (+15) or &gt; 10% (+5)
+- Response time &gt; 3x baseline AND &gt; 2s (+25 — time-based blind SQLi signal)
+
+Only returns rows above interest_threshold (default 10) so noise is filtered automatically. Hard cap 200 payloads per call.
+
+After reviewing, use repeat_request or view_request on the most interesting `new_request_id` values to inspect the full response.</description>
+    <parameters>
+      <parameter name="request_id" type="string" required="true">
+        <description>Caido request ID of the captured request to replay. Find via search_burp_proxy_history or list_requests.</description>
+      </parameter>
+      <parameter name="parameter" type="string" required="true">
+        <description>Name of the parameter to fuzz (query name, body field, header name, cookie name, or a literal path substring for path fuzzing).</description>
+      </parameter>
+      <parameter name="payloads" type="list" required="true">
+        <description>List of payload strings to substitute (max 200). Typically the output of load_payload_list or a custom set.</description>
+      </parameter>
+      <parameter name="parameter_location" type="string" required="false">
+        <description>One of: query, body, header, cookie, path. Default query.</description>
+      </parameter>
+      <parameter name="max_parallel" type="integer" required="false">
+        <description>Parallelism (reserved for future). Default 1.</description>
+      </parameter>
+      <parameter name="interest_threshold" type="integer" required="false">
+        <description>Minimum interest score to include a row in results. Default 10.</description>
+      </parameter>
+    </parameters>
+    <returns type="Dict[str, Any]">
+      <description>request_id, parameter, parameter_location, payloads_sent, baseline info, interesting_count, interesting rows (payload, status_code, response_size, response_time, interest_score, reasons, new_request_id), errors.</description>
+    </returns>
+  </tool>
+
+  <tool name="diff_responses">
+    <description>Diff two captured HTTP responses side-by-side, stripping noise headers by default.
+
+Best use after fuzz_request_parameter when one payload had a notable delta — this zooms in and shows exactly which lines differ. Also works for comparing authenticated vs unauthenticated responses, user-A vs user-B (IDOR), WAF-bypass variant vs baseline, etc.
+
+Strips Date, X-Request-Id, X-Trace-Id, Server-Timing, Set-Cookie, ETag, Last-Modified headers by default — override via ignore_headers if you care about those specifically.</description>
+    <parameters>
+      <parameter name="request_id_a" type="string" required="true">
+        <description>First captured request ID (baseline).</description>
+      </parameter>
+      <parameter name="request_id_b" type="string" required="true">
+        <description>Second captured request ID (probe).</description>
+      </parameter>
+      <parameter name="max_diff_lines" type="integer" required="false">
+        <description>Cap on diff output lines. Default 100.</description>
+      </parameter>
+      <parameter name="ignore_headers" type="list" required="false">
+        <description>Custom list of headers to exclude from diff. Pass [] to diff everything.</description>
+      </parameter>
+    </parameters>
+    <returns type="Dict[str, Any]">
+      <description>identical flag, body_size_delta_bytes, header_diff unified format, body_diff unified format, ignored_headers.</description>
+    </returns>
+  </tool>
+</tools>

