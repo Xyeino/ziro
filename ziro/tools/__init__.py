@@ -4,6 +4,7 @@ from .api_spec import *  # noqa: F403
 from .attack_graph import *  # noqa: F403
 from .browser import *  # noqa: F403
 from .evidence import *  # noqa: F403
+from .finding_validator import *  # noqa: F403
 from .executor import (
     execute_tool,
     execute_tool_invocation,

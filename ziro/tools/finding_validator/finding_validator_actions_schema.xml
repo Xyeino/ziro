@@ -1,0 +1,100 @@
+<tools>
+  <tool name="list_findings_for_validation">
+    <description>List all currently-tracked vulnerabilities so the validator can iterate through them.
+
+Call this at the start of the validator pass to get the full list of findings that need re-execution verdicts. Returns id, title, severity, endpoint/method, whether the finding has a PoC script, and a preview of that PoC.
+
+severity_filter: optional comma-separated list of severities to include (e.g., "CRITICAL,HIGH") — typically you only need to re-validate critical and high findings; medium/low are lower priority for validation budget.</description>
+    <parameters>
+      <parameter name="severity_filter" type="string" required="false">
+        <description>Comma-separated severity names to include. Empty = all severities.</description>
+      </parameter>
+    </parameters>
+    <returns type="Dict[str, Any]">
+      <description>total count, findings list (id, title, severity, endpoint, method, has_poc, poc_preview, target).</description>
+    </returns>
+  </tool>
+
+  <tool name="validate_single_finding">
+    <description>Re-execute a single finding's PoC command and produce a scored verdict.
+
+This is the core of the validator pass: takes a PoC command and three marker lists, runs the command in the sandbox, scores the output against the markers, and returns one of five verdict levels.
+
+Verdict levels (first-match-wins):
+- CONFIRMED (0.75-0.95 confidence): exploit reproduces cleanly, expected markers present in output
+- POTENTIAL (0.50 confidence): 2xx response with meaningful body but no markers to pin down success
+- UNREPRODUCED (0.70 confidence): some error indicators present, no success signal
+- FALSE_POSITIVE (0.80 confidence): multiple error indicators, zero success signal
+- INCONCLUSIVE (0.30 confidence): neither success nor error indicators matched
+
+Marker tuning guidance per vulnerability class:
+- LFI /etc/passwd: expected_markers=["root:x:0:0", "nobody:"]
+- RCE id: expected_markers=["uid=", "gid="]
+- XSS: expected_markers=[unique_random_token_you_injected]
+- Time-based blind SQLi: success_indicators=["sleep completed", "5.1", "5.2"] based on the expected delay
+- Reflected SQLi error: expected_markers=["sql syntax", "mysql", "postgresql", "ora-"]
+
+After getting the verdict, call record_validation_verdict to persist it against the finding.</description>
+    <parameters>
+      <parameter name="finding_id" type="string" required="false">
+        <description>ID of the finding being validated (from list_findings_for_validation).</description>
+      </parameter>
+      <parameter name="title" type="string" required="false">
+        <description>Human-readable title for logging.</description>
+      </parameter>
+      <parameter name="poc_command" type="string" required="true">
+        <description>Shell command to re-execute the PoC. Typically a curl / python / nuclei / sqlmap invocation.</description>
+      </parameter>
+      <parameter name="expected_markers" type="list" required="false">
+        <description>Strings that MUST appear in output for CONFIRMED verdict. Be specific (unique tokens, known file contents).</description>
+      </parameter>
+      <parameter name="success_indicators" type="list" required="false">
+        <description>Generic success signals. Defaults cover common cases (200 OK, root:x:, shell prompts).</description>
+      </parameter>
+      <parameter name="error_indicators" type="list" required="false">
+        <description>Signals that suggest failure. Defaults cover 403/401/404/WAF block/access denied patterns.</description>
+      </parameter>
+      <parameter name="timeout" type="integer" required="false">
+        <description>Max seconds to wait for the PoC to complete. Default 60.</description>
+      </parameter>
+    </parameters>
+    <returns type="Dict[str, Any]">
+      <description>finding_id, title, verdict, confidence, reasons, exit_code, duration_sec, response_status (parsed from HTTP response line), output_preview, output_truncated, poc_command.</description>
+    </returns>
+  </tool>
+
+  <tool name="record_validation_verdict">
+    <description>Persist a validation verdict against a finding in the tracer for the final report.
+
+Call after validate_single_finding. The verdict and evidence are attached to the existing vulnerability record so the final report shows validation status next to each finding.
+
+Rules for the reporting agent:
+- CONFIRMED findings → include with full details, no caveats
+- POTENTIAL findings → include but mark clearly as "potential, not fully reproduced"
+- UNREPRODUCED findings → include with explicit "could not reproduce during validation" note
+- FALSE_POSITIVE findings → DROP from final report entirely
+- INCONCLUSIVE → include with "inconclusive validation" warning, let client decide
+
+If the tracer does not have a native verdict setter, the tool writes to /workspace/validation/verdicts.jsonl as an audit trail.</description>
+    <parameters>
+      <parameter name="finding_id" type="string" required="true">
+        <description>ID of the finding being updated.</description>
+      </parameter>
+      <parameter name="verdict" type="string" required="true">
+        <description>One of: CONFIRMED, POTENTIAL, UNREPRODUCED, FALSE_POSITIVE, INCONCLUSIVE.</description>
+      </parameter>
+      <parameter name="confidence" type="number" required="true">
+        <description>Confidence score (0.0-1.0) from validate_single_finding.</description>
+      </parameter>
+      <parameter name="reasons" type="list" required="false">
+        <description>List of reason strings explaining the verdict.</description>
+      </parameter>
+      <parameter name="evidence" type="string" required="false">
+        <description>Evidence snippet (output preview, response body excerpt) to attach.</description>
+      </parameter>
+    </parameters>
+    <returns type="Dict[str, Any]">
+      <description>finding_id, verdict, persisted flag, audit_file path if fallback was used.</description>
+    </returns>
+  </tool>
+</tools>
