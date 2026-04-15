@@ -1,0 +1,17 @@
+<tools>
+  <tool name="read_tool_doc">
+    <description>Read the full schema (with examples and details) for a single tool.
+
+The system prompt's tools listing is rendered in compact mode by default — examples and details are stripped to save ~14K tokens per LLM call. When you need the full reference for a specific tool (worked examples, edge cases, parameter details), call this tool with its name.
+
+This is a one-off lookup — the full schema is NOT added to your permanent context. If you need it again later, call read_tool_doc again.</description>
+    <parameters>
+      <parameter name="tool_name" type="string" required="true">
+        <description>Name of the tool to look up (e.g., "create_vulnerability_report", "msf_execute", "browser_action"). Must match exactly an entry in the compact tools listing in your system prompt.</description>
+      </parameter>
+    </parameters>
+    <returns type="Dict[str, Any]">
+      <description>Success flag, tool_name, full schema string, and a reminder that the read is one-off.</description>
+    </returns>
+  </tool>
+</tools>

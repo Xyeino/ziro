@@ -1,6 +1,7 @@
 import inspect
 import logging
 import os
+import re
 from collections.abc import Callable
 from functools import wraps
 from inspect import signature
@@ -277,7 +278,44 @@ def should_execute_in_sandbox(tool_name: str) -> bool:
     return True
 
 
-def get_tools_prompt() -> str:
+_EXAMPLES_BLOCK_RE = re.compile(r"\s*<examples>.*?</examples>\s*", re.DOTALL)
+_DETAILS_BLOCK_RE = re.compile(r"\s*<details>.*?</details>\s*", re.DOTALL)
+
+
+def _compact_tool_xml(xml: str) -> str:
+    """Strip <examples> and <details> blocks from a tool schema.
+
+    The full prompt sent on every LLM call previously included every tool's
+    XML schema with all examples and details. Examples alone account for ~12K
+    tokens across the registry; details add another ~2K. Stripping them
+    reduces per-call input by ~14K tokens with no loss of essential info — the
+    name, description, and parameter list remain intact, which is everything
+    the model needs to generate a valid tool call.
+
+    Agents can still fetch the full schema (with examples) on demand via the
+    read_tool_doc tool when they actually need the reference material.
+    """
+    xml = _EXAMPLES_BLOCK_RE.sub("\n", xml)
+    xml = _DETAILS_BLOCK_RE.sub("\n", xml)
+    return xml
+
+
+def get_tools_prompt(compact: bool | None = None) -> str:
+    """Render the registered-tools XML block for the system prompt.
+
+    By default the prompt is compact: <examples> and <details> blocks are
+    stripped from each tool schema. Set ZIRO_VERBOSE_TOOLS=1 in the env (or
+    pass compact=False) to keep the full schemas. Compact mode saves ~14K
+    input tokens per LLM call and is the recommended production setting.
+    """
+    if compact is None:
+        compact = os.getenv("ZIRO_VERBOSE_TOOLS", "").strip().lower() not in (
+            "1",
+            "true",
+            "yes",
+            "on",
+        )
+
     tools_by_module: dict[str, list[dict[str, Any]]] = {}
     for tool in tools:
         module = tool.get("module", "unknown")
@@ -291,13 +329,29 @@ def get_tools_prompt() -> str:
         section_parts = [f"<{tag_name}>"]
         for tool in module_tools:
             tool_xml = tool.get("xml_schema", "")
-            if tool_xml:
-                indented_tool = "\n".join(f"  {line}" for line in tool_xml.split("\n"))
-                section_parts.append(indented_tool)
+            if not tool_xml:
+                continue
+            if compact:
+                tool_xml = _compact_tool_xml(tool_xml)
+            indented_tool = "\n".join(f"  {line}" for line in tool_xml.split("\n"))
+            section_parts.append(indented_tool)
         section_parts.append(f"</{tag_name}>")
         xml_sections.append("\n".join(section_parts))
 
     return "\n\n".join(xml_sections)
+
+
+def get_tool_xml_schema(tool_name: str) -> str | None:
+    """Return the full (uncompacted) XML schema for a single tool.
+
+    Used by the read_tool_doc progressive-disclosure tool so agents can
+    pull just-in-time reference for one specific tool when they need it,
+    without paying the cost of bundling every example into every prompt.
+    """
+    for tool in tools:
+        if tool.get("name") == tool_name:
+            return tool.get("xml_schema") or None
+    return None
 
 
 def clear_registry() -> None:
