@@ -1,0 +1,84 @@
+<tools>
+  <tool name="download_js_bundles">
+    <description>Download every JavaScript file referenced by a target page into the sandbox at /workspace/js/&lt;host&gt;/.
+
+Walks `&lt;script src=...&gt;`, `link rel="preload" as="script"`, and (when follow_chunks=true) recursively follows webpack chunk loaders to discover the FULL bundle, not just the entry script. Modern SPAs ship 50-500 chunks; this tool grabs all of them.
+
+Use this BEFORE analyze_js_file or fetch_source_map. The agent should call download_js_bundles ONCE per target host, then use analyze_js_file with the returned host slug for deep inspection.</description>
+    <parameters>
+      <parameter name="url" type="string" required="true">
+        <description>The target page URL whose JS files should be downloaded.</description>
+      </parameter>
+      <parameter name="max_files" type="integer" required="false">
+        <description>Maximum number of JS files to download (default 100). Increase for huge SPAs.</description>
+      </parameter>
+      <parameter name="follow_chunks" type="boolean" required="false">
+        <description>If true (default), parse downloaded files for webpack chunk references and recursively download those too.</description>
+      </parameter>
+      <parameter name="user_agent" type="string" required="false">
+        <description>Custom User-Agent header (default: Linux Chrome).</description>
+      </parameter>
+    </parameters>
+    <returns type="Dict[str, Any]">
+      <description>host slug, output_dir, list of downloaded files (url, local_path, size, lines, has_sourcemap), file_count, total_size_bytes, files_with_sourcemap, candidates_in_html, chunks_discovered.</description>
+    </returns>
+  </tool>
+
+  <tool name="analyze_js_file">
+    <description>Deep static analysis of one downloaded JS file or every file for a host.
+
+Pass `file_path` for one specific file, or `host` (the slug returned by download_js_bundles) for all files in /workspace/js/&lt;host&gt;/.
+
+Detects:
+- 60+ secret pattern classes: AWS, GCP, Azure, GitHub PAT (classic + fine-grained + OAuth + user-to-server + server-to-server + refresh), Slack tokens + webhooks, Discord bot tokens + webhooks, Telegram bot tokens, OpenAI/Anthropic/xAI/NVIDIA API keys, Stripe (live, test, restricted, public, webhook), Twilio, SendGrid, Mailgun, JWT tokens, Square, Shopify, PayPal, Cloudflare, Heroku, Algolia, Mapbox, Firebase config blocks, Supabase service keys, NPM tokens, Docker PATs, database connection URLs (PostgreSQL, MySQL, MongoDB, Redis), private keys (RSA, EC, OpenSSH), and generic api_key/bearer/secret patterns
+- API endpoints from string literals (paths matching /api/, /rest/, /v\d+/, /graphql/, /auth/, /admin/, etc.)
+- SPA route definitions (React Router, Vue Router, Angular, Next.js Link)
+- DOM XSS sinks (innerHTML, outerHTML, document.write, eval, Function constructor, setTimeout/setInterval with string args, insertAdjacentHTML, location.href/.assign) WITH the variable feeding them so the agent can trace user-controlled flow
+- sourceMappingURL trailer references (use fetch_source_map next)
+- Hardcoded third-party URLs (CDN, external APIs)</description>
+    <parameters>
+      <parameter name="file_path" type="string" required="false">
+        <description>Absolute or workspace-relative path to a single .js file. Mutually exclusive with `host`.</description>
+      </parameter>
+      <parameter name="host" type="string" required="false">
+        <description>Host slug from download_js_bundles. Analyzes every .js file in /workspace/js/&lt;host&gt;/. Mutually exclusive with `file_path`.</description>
+      </parameter>
+      <parameter name="max_findings_per_type" type="integer" required="false">
+        <description>Cap on how many matches per pattern per file (default 30) to avoid flooding context.</description>
+      </parameter>
+      <parameter name="include_dom_xss" type="boolean" required="false">
+        <description>If true (default), scan for DOM XSS sinks.</description>
+      </parameter>
+      <parameter name="include_endpoints" type="boolean" required="false">
+        <description>If true (default), extract API endpoint paths.</description>
+      </parameter>
+      <parameter name="include_routes" type="boolean" required="false">
+        <description>If true (default), extract SPA routes.</description>
+      </parameter>
+    </parameters>
+    <returns type="Dict[str, Any]">
+      <description>files_analyzed, secrets (with file/line context), secrets_count, api_endpoints, spa_routes, dom_xss_sinks (with sink, context, file, line), sink_count, source_map_refs, third_party_urls.</description>
+    </returns>
+  </tool>
+
+  <tool name="fetch_source_map">
+    <description>Fetch a .js file's source map and reconstruct the original source tree to disk.
+
+Looks for a `sourceMappingURL` trailer in the JS file (or accepts a direct .map URL), downloads the .map, parses the standard Source Map v3 JSON, and writes each `sources[i]` entry's content from `sourcesContent[i]` to /workspace/sources/&lt;host&gt;/&lt;source_path&gt;.
+
+When sourcesContent is populated (the common case for unminified production builds), this gives the agent the COMPLETE original source tree — variable names, comments, file structure, the works. Many production targets accidentally ship .map files; this tool exfiltrates the entire frontend codebase from a single .map endpoint.
+
+Returns 4xx with a clear message if the .map endpoint is locked down (which is the secure default — flag absence as good practice in the report).</description>
+    <parameters>
+      <parameter name="js_url" type="string" required="true">
+        <description>URL of the .js file (the tool will look up its sourceMappingURL trailer) OR a direct .map URL. Both work.</description>
+      </parameter>
+      <parameter name="user_agent" type="string" required="false">
+        <description>Custom User-Agent header.</description>
+      </parameter>
+    </parameters>
+    <returns type="Dict[str, Any]">
+      <description>map_url, host, output_dir, index_file (text manifest), total_sources, reconstructed, skipped_no_content, sample_sources.</description>
+    </returns>
+  </tool>
+</tools>
