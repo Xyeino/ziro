@@ -20,6 +20,7 @@ from .js_analysis import *  # noqa: F403
 from .load_skill import *  # noqa: F403
 from .metasploit import *  # noqa: F403
 from .notes import *  # noqa: F403
+from .payload_lib import *  # noqa: F403
 from .proxy import *  # noqa: F403
 from .python import *  # noqa: F403
 from .registry import (
