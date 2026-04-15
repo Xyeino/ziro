@@ -1,0 +1,54 @@
+<tools>
+  <tool name="discover_api_spec">
+    <description>Probe ~30 well-known paths for an OpenAPI/Swagger spec on the target.
+
+Hits each candidate with a GET and considers any 200 containing openapi/swagger markers a hit. Also parses swagger-ui/redoc/rapidoc HTML pages to extract the real spec URL they reference, and follows those to fetch the JSON.
+
+Run this EARLY in the recon phase — a successful hit gives the agent the complete API contract in one call, often with 10x more endpoints than frontend crawling would reveal. Follow up with parse_api_spec on any returned content for a structured endpoint inventory.</description>
+    <parameters>
+      <parameter name="target" type="string" required="true">
+        <description>Target base URL or hostname (e.g., "https://api.target.com" or just "api.target.com"). Scheme is added automatically if missing.</description>
+      </parameter>
+      <parameter name="user_agent" type="string" required="false">
+        <description>Override the User-Agent header.</description>
+      </parameter>
+      <parameter name="timeout" type="integer" required="false">
+        <description>Per-request timeout in seconds (default 8).</description>
+      </parameter>
+      <parameter name="include_yaml" type="boolean" required="false">
+        <description>If false, skip YAML candidates. Default true.</description>
+      </parameter>
+    </parameters>
+    <returns type="Dict[str, Any]">
+      <description>target, base, candidates_checked count, specs_found count, found_specs list (url, content_type, size, kind, content_preview), quick_summary of the first parsed spec (title, version, total_paths, method_counts, first_20_paths), hits list.</description>
+    </returns>
+  </tool>
+
+  <tool name="discover_graphql_endpoint">
+    <description>Find GraphQL endpoints on the target and attempt schema introspection.
+
+Probes ~15 common paths (/graphql, /api/graphql, /query, /gql, /graphiql, /playground, /apollo, etc.) with a minimal `{ __typename }` query, then for any hit runs the full IntrospectionQuery. Even when the server's client-side "disable introspection" flag is set, the middleware often only blocks GET-introspection or specific header shapes — this tool catches the common misconfigurations.
+
+Also tries Apollo-specific header variants (persisted queries, trace headers) because some servers only accept those shapes.</description>
+    <parameters>
+      <parameter name="target" type="string" required="true">
+        <description>Target base URL or hostname.</description>
+      </parameter>
+      <parameter name="user_agent" type="string" required="false">
+        <description>Override the User-Agent.</description>
+      </parameter>
+      <parameter name="timeout" type="integer" required="false">
+        <description>Per-request timeout in seconds (default 10).</description>
+      </parameter>
+      <parameter name="try_introspection" type="boolean" required="false">
+        <description>If true (default), run the full IntrospectionQuery against the first hit.</description>
+      </parameter>
+      <parameter name="try_apollo_variants" type="boolean" required="false">
+        <description>If true (default), probe with Apollo persisted-query and trace headers to detect servers that only accept those shapes.</description>
+      </parameter>
+    </parameters>
+    <returns type="Dict[str, Any]">
+      <description>target, base, hits list, hit_count, introspection result (with query/mutation type names, field lists, user-defined types), apollo_variants notes.</description>
+    </returns>
+  </tool>
+</tools>

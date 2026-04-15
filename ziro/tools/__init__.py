@@ -1,4 +1,5 @@
 from .agents_graph import *  # noqa: F403
+from .api_discovery import *  # noqa: F403
 from .api_spec import *  # noqa: F403
 from .attack_graph import *  # noqa: F403
 from .browser import *  # noqa: F403
@@ -31,7 +32,9 @@ from .registry import (
     tools,
 )
 from .reporting import *  # noqa: F403
+from .sca import *  # noqa: F403
 from .sliver_c2 import *  # noqa: F403
+from .smart_fuzz import *  # noqa: F403
 from .terminal import *  # noqa: F403
 from .thinking import *  # noqa: F403
 from .tmux_interactive import *  # noqa: F403

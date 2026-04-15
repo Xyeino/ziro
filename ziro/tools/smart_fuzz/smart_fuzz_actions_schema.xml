@@ -1,0 +1,47 @@
+<tools>
+  <tool name="generate_smart_wordlist">
+    <description>Generate a target-specific wordlist from already-discovered paths.
+
+Static wordlists (seclists common.txt) bang the same ~4000 paths at every target without context. This tool observes what the scanner has already found and derives variants:
+
+- Singular/plural swaps (/users → /user, /product → /products)
+- User subresources (/users/me, /users/{id}, /users/export, /users/bulk)
+- Admin variants (/admin/api/users from /api/users)
+- Version variants (/v1/users, /v2/users, /api/v3/users from /api/users)
+- File extension variants (/users.json, /users.xml, /users.bak)
+- Sibling guesses (seeing /users → try /roles, /permissions, /groups, /sessions)
+- Parent directories (always explored)
+- Always-useful: debug/actuator/.well-known/.env/metrics/healthz endpoints
+
+Call this AFTER you've done one pass of crawling / API spec discovery — the more input you pass, the better the output. The wordlist is ordered and capped at max_entries. Feed it to ffuf, feroxbuster, or iterate with curl via terminal_execute for surgical checks.</description>
+    <parameters>
+      <parameter name="discovered_paths" type="list" required="false">
+        <description>List of paths already discovered (from recon, crawling, or API spec). More input = better output. Absolute URLs are accepted and normalized to paths.</description>
+      </parameter>
+      <parameter name="base_url" type="string" required="false">
+        <description>Target base URL. If provided, the output also includes absolute_urls ready for ffuf/feroxbuster.</description>
+      </parameter>
+      <parameter name="include_admin" type="boolean" required="false">
+        <description>Include admin variants. Default true.</description>
+      </parameter>
+      <parameter name="include_debug" type="boolean" required="false">
+        <description>Include debug/actuator/metrics paths. Default true.</description>
+      </parameter>
+      <parameter name="include_well_known" type="boolean" required="false">
+        <description>Include .well-known endpoints. Default true.</description>
+      </parameter>
+      <parameter name="include_versions" type="boolean" required="false">
+        <description>Include version prefix variants (/v1, /v2, /api/v1, etc). Default true.</description>
+      </parameter>
+      <parameter name="include_extensions" type="boolean" required="false">
+        <description>Include file extension variants (.json, .xml, .bak, .old). Default true.</description>
+      </parameter>
+      <parameter name="max_entries" type="integer" required="false">
+        <description>Cap on output size. Default 500.</description>
+      </parameter>
+    </parameters>
+    <returns type="Dict[str, Any]">
+      <description>input_paths count, generated_count, wordlist list of paths, absolute_urls list (if base_url provided), usage note.</description>
+    </returns>
+  </tool>
+</tools>

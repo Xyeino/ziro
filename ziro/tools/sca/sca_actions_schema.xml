@@ -1,0 +1,53 @@
+<tools>
+  <tool name="detect_lockfiles">
+    <description>Find all dependency lockfiles and manifests under a codebase path.
+
+First step for SCA — shows the agent what ecosystems (npm, pip, go, maven, cargo, bundler, composer, hex, dart) are present before deciding how to scan. Recurses up to max_depth and skips the usual noise directories (node_modules, .git, .venv, vendor, dist, build, target).</description>
+    <parameters>
+      <parameter name="root_path" type="string" required="false">
+        <description>Path to search. Absolute or workspace-relative. Default /workspace.</description>
+      </parameter>
+      <parameter name="max_depth" type="integer" required="false">
+        <description>Max directory depth to recurse. Default 5.</description>
+      </parameter>
+    </parameters>
+    <returns type="Dict[str, Any]">
+      <description>root, ecosystems_detected list, lockfiles_by_ecosystem dict, total_lockfiles count.</description>
+    </returns>
+  </tool>
+
+  <tool name="sca_scan_dependencies">
+    <description>Scan a codebase or container image for known-CVE dependency vulnerabilities via Trivy.
+
+Trivy auto-detects lockfiles (package-lock.json, poetry.lock, go.sum, pom.xml, Gemfile.lock, composer.lock, Cargo.lock, etc.) and checks each package against CVE databases. Returns severity-sorted findings with CVE ID, affected package, installed/fixed versions, CVSS score, and references.
+
+Each CRITICAL/HIGH finding should be promoted to create_vulnerability_report. Medium findings typically don't warrant a full report unless they are actively exploitable and reachable from a network-facing entry point.
+
+scan_type:
+- "fs": filesystem scan of a project directory (default)
+- "image": container image scan (pass image name/tag in target_path)</description>
+    <parameters>
+      <parameter name="target_path" type="string" required="true">
+        <description>Absolute or workspace-relative path for fs scan, or image name/tag for image scan.</description>
+      </parameter>
+      <parameter name="scan_type" type="string" required="false">
+        <description>"fs" (default) or "image".</description>
+      </parameter>
+      <parameter name="severity_filter" type="string" required="false">
+        <description>Comma-separated severities to include. Default "CRITICAL,HIGH,MEDIUM".</description>
+      </parameter>
+      <parameter name="include_dev_deps" type="boolean" required="false">
+        <description>Include devDependencies (npm) in the scan. Default true.</description>
+      </parameter>
+      <parameter name="timeout" type="integer" required="false">
+        <description>Trivy timeout in seconds. Default 300.</description>
+      </parameter>
+      <parameter name="max_findings_per_severity" type="integer" required="false">
+        <description>Cap on findings returned per severity bucket. Default 50.</description>
+      </parameter>
+    </parameters>
+    <returns type="Dict[str, Any]">
+      <description>scan_type, target, total_findings, by_severity counts (CRITICAL/HIGH/MEDIUM/LOW/UNKNOWN), vulnerable_packages_count, findings bucket dict keyed by severity with full vulnerability details.</description>
+    </returns>
+  </tool>
+</tools>
