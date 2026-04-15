@@ -413,6 +413,15 @@ class LLM:
             return False
 
     def _supports_reasoning(self) -> bool:
+        # xAI Grok exception: every Grok model EXCEPT grok-3-mini has its
+        # reasoning built in and rejects the reasoning_effort parameter with a
+        # 400 "does not support parameter reasoningEffort" error, even though
+        # litellm.supports_reasoning() reports True for the grok-4 family.
+        # Only grok-3-mini accepts reasoning_effort and varies its behavior.
+        model_name = (self.config.model_name or "").lower()
+        if "xai/" in model_name or "grok" in model_name:
+            return "grok-3-mini" in model_name
+
         try:
             return bool(supports_reasoning(model=self.config.canonical_model))
         except Exception:  # noqa: BLE001
