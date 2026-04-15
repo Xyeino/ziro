@@ -1,3 +1,4 @@
+import hashlib
 import json
 import logging
 import re
@@ -139,6 +140,114 @@ def _parse_dedupe_response(content: str) -> dict[str, Any]:
     }
 
 
+_VULN_TYPE_KEYWORDS: dict[str, tuple[str, ...]] = {
+    "sqli": ("sql injection", "sqli", "sql-injection", "sql_injection"),
+    "xss": ("cross-site scripting", "xss", "reflected xss", "stored xss", "dom xss", "dom-xss"),
+    "rce": ("remote code execution", "rce", "command injection", "command-injection", "cmd injection"),
+    "lfi": ("local file inclusion", "lfi", "path traversal", "directory traversal"),
+    "ssrf": ("ssrf", "server-side request forgery", "server side request forgery"),
+    "xxe": ("xxe", "xml external entity"),
+    "ssti": ("ssti", "server-side template injection", "template injection"),
+    "idor": ("idor", "bola", "broken object level authorization", "insecure direct object reference"),
+    "open_redirect": ("open redirect", "open-redirect"),
+    "auth_bypass": ("auth bypass", "authentication bypass", "broken authentication"),
+    "csrf": ("csrf", "cross-site request forgery"),
+    "cors": ("cors misconfiguration", "cors"),
+    "deser": ("deserialization", "insecure deserialization"),
+    "info_disc": ("information disclosure", "info disclosure", "info leak"),
+    "secret_exp": ("hardcoded secret", "exposed secret", "leaked credential", "api key exposure"),
+    "path_trav": ("path traversal", "directory traversal", "lfi"),
+    "mass_assign": ("mass assignment", "mass-assignment"),
+    "race": ("race condition", "toctou"),
+    "weak_crypto": ("weak crypto", "weak cryptography", "weak encryption", "weak hash"),
+    "broken_fla": ("broken function level authorization", "bfla", "privilege escalation"),
+}
+
+
+def _classify_vuln_type(title: str, description: str) -> str:
+    """Map a free-form title/description to one of the canonical vuln type keys.
+
+    Used to normalize findings so 'Reflected XSS in search' and 'Cross-Site Scripting
+    via q parameter' both map to 'xss' for fingerprinting purposes.
+    """
+    combined = f"{title} {description}".lower()
+    best_match = "other"
+    best_len = 0
+    for vtype, keywords in _VULN_TYPE_KEYWORDS.items():
+        for kw in keywords:
+            if kw in combined and len(kw) > best_len:
+                best_match = vtype
+                best_len = len(kw)
+    return best_match
+
+
+def _normalize_endpoint(endpoint: str | None) -> str:
+    """Normalize an endpoint so /api/users/123 and /api/users/456 collapse.
+
+    Replaces numeric IDs and UUIDs with placeholders so different user IDs
+    testing the same endpoint don't create false-positive duplicates.
+    """
+    if not endpoint:
+        return ""
+    e = endpoint.strip().lower()
+    # Strip scheme+host if present
+    e = re.sub(r"^https?://[^/]+", "", e)
+    # Strip query string
+    e = e.split("?")[0].split("#")[0]
+    # Collapse numeric IDs
+    e = re.sub(r"/\d+(?=/|$)", "/{id}", e)
+    # Collapse UUIDs
+    e = re.sub(r"/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?=/|$)", "/{uuid}", e)
+    # Collapse hex hashes (8+ hex chars)
+    e = re.sub(r"/[0-9a-f]{8,}(?=/|$)", "/{hash}", e)
+    # Collapse slugs with trailing digits
+    e = re.sub(r"/[a-z_-]+-\d+(?=/|$)", "/{slug}", e)
+    # Multiple slashes
+    e = re.sub(r"/+", "/", e)
+    return e.rstrip("/") or "/"
+
+
+def _extract_primary_location(report: dict[str, Any]) -> str:
+    """Extract a stable location signature from a report dict.
+
+    Prefers the first code_location file:line when present, falls back to
+    normalized endpoint+method, falls back to target.
+    """
+    locations = report.get("code_locations")
+    if isinstance(locations, list) and locations:
+        first = locations[0]
+        if isinstance(first, dict):
+            f = (first.get("file") or "").lower()
+            line = first.get("line") or ""
+            if f:
+                return f"code:{f}:{line}"
+
+    endpoint = _normalize_endpoint(report.get("endpoint") or report.get("target") or "")
+    method = (report.get("method") or "").upper()
+    if endpoint:
+        return f"http:{method}:{endpoint}"
+
+    target = (report.get("target") or "").lower()
+    return f"target:{target}"
+
+
+def compute_fingerprint(report: dict[str, Any]) -> str:
+    """Short hex fingerprint for fast duplicate detection.
+
+    Fingerprint = blake2s(vuln_type + location). Two findings with the same
+    fingerprint are almost certainly the same issue — so we can skip the
+    LLM dedupe call entirely for these.
+    """
+    vuln_type = _classify_vuln_type(
+        report.get("title") or "",
+        report.get("description") or "",
+    )
+    location = _extract_primary_location(report)
+    composite = f"{vuln_type}|{location}"
+    h = hashlib.blake2s(composite.encode(), digest_size=8).hexdigest()
+    return h
+
+
 def check_duplicate(
     candidate: dict[str, Any], existing_reports: list[dict[str, Any]]
 ) -> dict[str, Any]:
@@ -149,6 +258,26 @@ def check_duplicate(
             "confidence": 1.0,
             "reason": "No existing reports to compare against",
         }
+
+    # Fast path: fingerprint-based exact match. Catches the obvious duplicates
+    # (same vuln type + same normalized endpoint/code location) without an LLM
+    # round-trip. LLM fallback handles the fuzzy cases where fingerprints differ
+    # but the reports are semantically the same.
+    try:
+        candidate_fp = compute_fingerprint(candidate)
+        for existing in existing_reports:
+            existing_fp = existing.get("_fingerprint") or compute_fingerprint(existing)
+            if existing_fp == candidate_fp:
+                return {
+                    "is_duplicate": True,
+                    "duplicate_id": existing.get("id") or existing.get("report_id") or "",
+                    "confidence": 0.95,
+                    "reason": f"Fingerprint match (vuln_type + location) — skipped LLM dedupe",
+                    "fingerprint": candidate_fp,
+                    "method": "fingerprint",
+                }
+    except Exception as e:  # noqa: BLE001
+        logger.warning(f"Fingerprint dedupe failed, falling back to LLM: {e}")
 
     try:
         candidate_cleaned = _prepare_report_for_comparison(candidate)
