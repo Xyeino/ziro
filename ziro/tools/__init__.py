@@ -15,6 +15,7 @@ from .executor import (
 from .engagement_plan import *  # noqa: F403
 from .file_edit import *  # noqa: F403
 from .finish import *  # noqa: F403
+from .js_analysis import *  # noqa: F403
 from .load_skill import *  # noqa: F403
 from .metasploit import *  # noqa: F403
 from .notes import *  # noqa: F403

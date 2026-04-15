@@ -617,6 +617,14 @@ try:
                 (r'(?:password|passwd|secret)["\\'\\s:=]+["\\']([^"\\'\\s]{{6,}})["\\'\\s]', 'PASSWORD'),
                 (r'(?:firebase|supabase|appwrite)["\\'\\s:=]+["\\']([\w:/.-]{{20,}})["\\'\\s]', 'SERVICE_KEY'),
                 (r'([0-9]{{9,10}}:[A-Za-z0-9_-]{{35}})', 'TELEGRAM_BOT_TOKEN'),
+                (r'(ghp_[0-9a-zA-Z]{{36,}})', 'GITHUB_PAT_CLASSIC'),
+                (r'(github_pat_[0-9a-zA-Z_]{{80,}})', 'GITHUB_PAT_FINE'),
+                (r'(xox[baprs]-[0-9a-zA-Z-]{{10,}})', 'SLACK_TOKEN'),
+                (r'(AIza[0-9A-Za-z_-]{{35}})', 'GOOGLE_API_KEY'),
+                (r'(sbp_[a-f0-9]{{40}})', 'SUPABASE_SERVICE_KEY'),
+                (r'(sk-ant-[A-Za-z0-9_-]{{30,}})', 'ANTHROPIC_KEY'),
+                (r'(xai-[A-Za-z0-9]{{60,}})', 'XAI_KEY'),
+                (r'((?:postgres|mysql|mongodb)(?:\\+srv)?://[^\\s\"\\'`<>]{{8,}})', 'DB_CONNECTION_URL'),
             ]:
                 for m in re.finditer(pattern, js, re.IGNORECASE):
                     found_secrets.append({{"type": name, "value": m.group(1)[:50], "source": js_url.split("/")[-1]}})
