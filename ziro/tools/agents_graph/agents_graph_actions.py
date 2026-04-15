@@ -43,32 +43,19 @@ def _run_agent_in_thread(
             else "started with a fresh context"
         )
 
-        task_xml = f"""<agent_delegation>
-    <identity>
-        ⚠️ You are NOT your parent agent. You are a NEW, SEPARATE sub-agent (not root).
-
-        Your Info: {state.agent_name} ({state.agent_id})
-        Parent Info: {parent_name} ({state.parent_id})
-    </identity>
-
-    <your_task>{state.task}</your_task>
-
-    <instructions>
-        - You have {context_status}
-        - Inherited context is for BACKGROUND ONLY - don't continue parent's work
-        - Maintain strict self-identity: never speak as or for your parent
-        - Do not merge your conversation with the parent's;
-        - Do not claim parent's actions or messages as your own
-        - Focus EXCLUSIVELY on your delegated task above
-        - Work independently with your own approach
-        - Use agent_finish when complete to report back to parent
-        - You are a SPECIALIST for this specific task
-        - You share the same container as other agents but have your own tool server instance
-        - All agents share /workspace directory and proxy history for better collaboration
-        - You can see files created by other agents and proxy traffic from previous work
-        - Build upon previous work but focus on your specific delegated task
-    </instructions>
-</agent_delegation>"""
+        # Compact delegation message. Most rules below were repeated boilerplate
+        # the model already knows from the system prompt — kept only the
+        # task-specific facts (identity, parent, context status).
+        task_xml = (
+            f"<agent_delegation>\n"
+            f"You are sub-agent {state.agent_name} ({state.agent_id}), "
+            f"reporting to {parent_name} ({state.parent_id}).\n"
+            f"Task: {state.task}\n"
+            f"Context: {context_status}. "
+            f"Workspace at /workspace shared with peer agents. "
+            f"Call agent_finish when complete.\n"
+            f"</agent_delegation>"
+        )
 
         state.add_message("user", task_xml)
 
@@ -458,32 +445,28 @@ def agent_finish(
                 parent_exists = parent_id in _agent_graph["nodes"]
 
             if parent_exists:
-                findings_xml = "\n".join(
-                    f"        <finding>{finding}</finding>" for finding in (findings or [])
+                # Compact completion report — half the tokens of the previous
+                # nested XML form. The findings/recommendations are still
+                # listed line-by-line, just without the extra wrapper tags.
+                status_str = "SUCCESS" if success else "FAILED"
+                findings_block = ""
+                if findings:
+                    findings_block = "\nFindings:\n" + "\n".join(
+                        f"- {f}" for f in findings
+                    )
+                recs_block = ""
+                if final_recommendations:
+                    recs_block = "\nRecommendations:\n" + "\n".join(
+                        f"- {r}" for r in final_recommendations
+                    )
+                report_message = (
+                    f"<agent_completion_report from=\"{agent_node['name']}\" "
+                    f"status=\"{status_str}\">\n"
+                    f"Task: {agent_node['task']}\n"
+                    f"Summary: {result_summary}"
+                    f"{findings_block}{recs_block}\n"
+                    f"</agent_completion_report>"
                 )
-                recommendations_xml = "\n".join(
-                    f"        <recommendation>{rec}</recommendation>"
-                    for rec in (final_recommendations or [])
-                )
-
-                report_message = f"""<agent_completion_report>
-    <agent_info>
-        <agent_name>{agent_node["name"]}</agent_name>
-        <agent_id>{agent_id}</agent_id>
-        <task>{agent_node["task"]}</task>
-        <status>{"SUCCESS" if success else "FAILED"}</status>
-        <completion_time>{agent_node["finished_at"]}</completion_time>
-    </agent_info>
-    <results>
-        <summary>{result_summary}</summary>
-        <findings>
-{findings_xml}
-        </findings>
-        <recommendations>
-{recommendations_xml}
-        </recommendations>
-    </results>
-</agent_completion_report>"""
 
                 from uuid import uuid4
 
