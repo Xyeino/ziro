@@ -35,6 +35,7 @@ from .terminal import *  # noqa: F403
 from .thinking import *  # noqa: F403
 from .tmux_interactive import *  # noqa: F403
 from .todo import *  # noqa: F403
+from .tool_doc import *  # noqa: F403
 from .web_search import *  # noqa: F403
 
 
