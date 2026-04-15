@@ -494,31 +494,20 @@ class BaseAgent(metaclass=AgentMeta):
                                 if sender_id and sender_id in _agent_graph.get("nodes", {}):
                                     sender_name = _agent_graph["nodes"][sender_id]["name"]
 
-                            message_content = f"""<inter_agent_message>
-    <delivery_notice>
-        <important>You have received a message from another agent. You should acknowledge
-        this message and respond appropriately based on its content. However, DO NOT echo
-        back or repeat the entire message structure in your response. Simply process the
-        content and respond naturally as/if needed.</important>
-    </delivery_notice>
-    <sender>
-        <agent_name>{sender_name}</agent_name>
-        <agent_id>{sender_id}</agent_id>
-    </sender>
-    <message_metadata>
-        <type>{message.get("message_type", "information")}</type>
-        <priority>{message.get("priority", "normal")}</priority>
-        <timestamp>{message.get("timestamp", "")}</timestamp>
-    </message_metadata>
-    <content>
-{message.get("content", "")}
-    </content>
-    <delivery_info>
-        <note>This message was delivered during your task execution.
-        Please acknowledge and respond if needed.</note>
-    </delivery_info>
-</inter_agent_message>"""
-                            state.add_message("user", message_content.strip())
+                            # Compact inter-agent message envelope. The model
+                            # already understands "received from another agent"
+                            # from the tag name — repeating the instruction in
+                            # delivery_notice/delivery_info every message wastes
+                            # ~500 tokens × N messages per scan with no benefit.
+                            msg_type = message.get("message_type", "information")
+                            priority = message.get("priority", "normal")
+                            message_content = (
+                                f"<inter_agent_message from=\"{sender_name}\" "
+                                f"type=\"{msg_type}\" priority=\"{priority}\">\n"
+                                f"{message.get('content', '')}\n"
+                                f"</inter_agent_message>"
+                            )
+                            state.add_message("user", message_content)
 
                         message["read"] = True
 
