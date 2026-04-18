@@ -75,8 +75,47 @@ def _is_ip(value: str) -> bool:
 async def _sandbox_exec(
     api_url: str, token: str, command: str, timeout: float = 60
 ) -> dict[str, Any]:
-    """Execute a command in the Docker sandbox via the tool server."""
+    """Execute a command in the Docker sandbox via the tool server.
+
+    If the previous command is still running (status='running'), sends C-c
+    to interrupt it and waits briefly before executing the new command.
+    This prevents the 'A command is already running' error that occurred
+    when long-running recon tools (nuclei, afrog, waf-tester) exceeded
+    their timeout and left the terminal session occupied.
+    """
+    headers = {"Authorization": f"Bearer {token}"}
+
     async with httpx.AsyncClient(trust_env=False) as client:
+        # Defensive: check if a previous command is still running by sending
+        # an empty command probe. If status='running', interrupt first.
+        try:
+            probe = await client.post(
+                f"{api_url}/execute",
+                json={
+                    "agent_id": "recon-agent",
+                    "tool_name": "terminal_execute",
+                    "kwargs": {"command": "", "timeout": 2},
+                },
+                headers=headers,
+                timeout=httpx.Timeout(8, connect=5),
+            )
+            probe_data = probe.json().get("result", {})
+            if probe_data.get("status") == "running":
+                # Previous command still running — interrupt it
+                await client.post(
+                    f"{api_url}/execute",
+                    json={
+                        "agent_id": "recon-agent",
+                        "tool_name": "terminal_execute",
+                        "kwargs": {"command": "C-c", "is_input": True, "timeout": 3},
+                    },
+                    headers=headers,
+                    timeout=httpx.Timeout(8, connect=5),
+                )
+                await asyncio.sleep(1)
+        except Exception:
+            pass  # Probe failure is non-fatal — try the real command anyway
+
         try:
             response = await client.post(
                 f"{api_url}/execute",
@@ -85,7 +124,7 @@ async def _sandbox_exec(
                     "tool_name": "terminal_execute",
                     "kwargs": {"command": command, "timeout": timeout},
                 },
-                headers={"Authorization": f"Bearer {token}"},
+                headers=headers,
                 timeout=httpx.Timeout(timeout + 30, connect=10),
             )
             response.raise_for_status()
