@@ -2230,18 +2230,48 @@ async def send_agent_message(req: SendMessageRequest) -> dict[str, Any]:
         raise HTTPException(status_code=404, detail="Agent not found")
 
     state = _agent_states[target_id]
-    state.add_message("user", req.message.strip())
 
-    # Resume agent regardless of current state
+    # 1. Put the message into the agent message queue so _check_agent_messages
+    #    picks it up on the next iteration. Previously the panel wrote directly
+    #    to state.messages, which the agent loop's _check_agent_messages never
+    #    saw — meaning the graph node status, tracer status, and UI were never
+    #    updated from 'waiting' to 'running'. The user saw a frozen "ожидающий"
+    #    panel even when the agent was actually processing the message.
+    from ziro.tools.agents_graph.agents_graph_actions import send_user_message_to_agent
+
+    send_result = send_user_message_to_agent(target_id, req.message.strip())
+    if not send_result.get("success"):
+        # Fallback: direct state mutation if the queue-based path failed
+        state.add_message("user", req.message.strip())
+
+    # 2. Resume the agent state if it's waiting or completed.
     if state.waiting_for_input:
         state.resume_from_waiting()
     elif state.completed or state.stop_requested:
-        # Agent finished — restart it with new task
         state.completed = False
         state.stop_requested = False
         state.waiting_for_input = False
         state.final_result = None
         logger.info("Resuming completed agent %s with new message", target_id)
+
+    # 3. Update the graph node + tracer so the UI reflects 'running' immediately
+    #    instead of staying stuck on 'waiting'/'completed'.
+    try:
+        with _agent_graph.get("_lock", __import__("threading").Lock()):
+            pass
+    except Exception:
+        pass
+
+    node = _agent_graph.get("nodes", {}).get(target_id)
+    if node and node.get("status") in ("waiting", "completed", "stopped", "finished"):
+        node["status"] = "running"
+
+    try:
+        tracer = get_global_tracer()
+        if tracer:
+            tracer.update_agent_status(target_id, "running")
+    except Exception:
+        pass
 
     return {"status": "sent", "agent_id": target_id, "message": req.message.strip()}
 
