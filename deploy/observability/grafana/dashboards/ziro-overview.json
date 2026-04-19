@@ -1,0 +1,74 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "graphTooltip": 0,
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Active scans",
+      "gridPos": { "x": 0, "y": 0, "w": 4, "h": 4 },
+      "targets": [
+        { "expr": "ziro_active_scans", "refId": "A" }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Total findings",
+      "gridPos": { "x": 4, "y": 0, "w": 4, "h": 4 },
+      "targets": [
+        { "expr": "ziro_findings_total", "refId": "A" }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "LLM cost (USD, session)",
+      "gridPos": { "x": 8, "y": 0, "w": 4, "h": 4 },
+      "targets": [
+        { "expr": "ziro_llm_cost_usd_total", "refId": "A" }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Confirmed / total",
+      "gridPos": { "x": 12, "y": 0, "w": 4, "h": 4 },
+      "targets": [
+        { "expr": "ziro_findings_confirmed_total / clamp_min(ziro_findings_total, 1)", "refId": "A" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "LLM tokens / sec",
+      "gridPos": { "x": 0, "y": 4, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "rate(ziro_llm_tokens_total[1m])", "refId": "A", "legendFormat": "{{kind}}" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Tool executions / min",
+      "gridPos": { "x": 12, "y": 4, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "rate(ziro_tool_executions_total[1m])", "refId": "A", "legendFormat": "{{tool}}" }
+      ]
+    },
+    {
+      "type": "logs",
+      "title": "Panel logs",
+      "gridPos": { "x": 0, "y": 12, "w": 24, "h": 10 },
+      "datasource": { "type": "loki", "uid": "Loki" },
+      "targets": [
+        { "expr": "{container=~\"ziro-.*\"}", "refId": "A" }
+      ]
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 38,
+  "tags": ["ziro"],
+  "templating": { "list": [] },
+  "time": { "from": "now-6h", "to": "now" },
+  "title": "Ziro Overview",
+  "uid": "ziro-overview",
+  "version": 1
+}

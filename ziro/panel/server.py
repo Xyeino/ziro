@@ -28,7 +28,7 @@ from typing import Any
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -2337,6 +2337,97 @@ async def get_llm_debug(agent_id: str) -> dict[str, Any]:
             for m in messages
         ],
     }
+
+
+@app.get("/api/metrics", response_class=PlainTextResponse)
+async def prometheus_metrics() -> str:
+    """Prometheus text-format metrics endpoint.
+
+    Exposes ziro_active_scans, ziro_findings_total, ziro_findings_confirmed_total,
+    ziro_llm_cost_usd_total, ziro_llm_tokens_total (labeled by kind), and
+    ziro_tool_executions_total (labeled by tool, status).
+    """
+    lines: list[str] = []
+
+    # Active scans = agents not completed
+    active = sum(1 for s in _agent_states.values() if not s.completed)
+    lines += [
+        "# HELP ziro_active_scans Number of agents currently running",
+        "# TYPE ziro_active_scans gauge",
+        f"ziro_active_scans {active}",
+    ]
+
+    # Findings
+    try:
+        from ziro.engagement import get_engagement_state
+
+        st = get_engagement_state()
+        total = len(st.findings)
+        confirmed = sum(1 for f in st.findings.values() if f.status == "confirmed")
+        by_sev: dict[str, int] = {}
+        for f in st.findings.values():
+            by_sev[f.severity or "UNKNOWN"] = by_sev.get(f.severity or "UNKNOWN", 0) + 1
+        lines += [
+            "# HELP ziro_findings_total Total findings in engagement state",
+            "# TYPE ziro_findings_total gauge",
+            f"ziro_findings_total {total}",
+            "# HELP ziro_findings_confirmed_total Confirmed findings in engagement state",
+            "# TYPE ziro_findings_confirmed_total gauge",
+            f"ziro_findings_confirmed_total {confirmed}",
+            "# HELP ziro_findings_by_severity Findings by severity label",
+            "# TYPE ziro_findings_by_severity gauge",
+        ]
+        for sev, n in by_sev.items():
+            lines.append(f'ziro_findings_by_severity{{severity="{sev}"}} {n}')
+    except Exception:
+        pass
+
+    # LLM cost / tokens
+    total_cost = 0.0
+    total_input = 0
+    total_output = 0
+    total_cached = 0
+    try:
+        from ziro.tools.agents_graph.agents_graph_actions import _agent_instances
+
+        for inst in _agent_instances.values():
+            if hasattr(inst, "llm") and hasattr(inst.llm, "_total_stats"):
+                s = inst.llm._total_stats
+                total_cost += getattr(s, "cost", 0.0) or 0.0
+                total_input += getattr(s, "input_tokens", 0) or 0
+                total_output += getattr(s, "output_tokens", 0) or 0
+                total_cached += getattr(s, "cached_tokens", 0) or 0
+    except Exception:
+        pass
+
+    lines += [
+        "# HELP ziro_llm_cost_usd_total Cumulative LLM cost in USD this process",
+        "# TYPE ziro_llm_cost_usd_total counter",
+        f"ziro_llm_cost_usd_total {total_cost}",
+        "# HELP ziro_llm_tokens_total Cumulative LLM tokens by kind",
+        "# TYPE ziro_llm_tokens_total counter",
+        f'ziro_llm_tokens_total{{kind="input"}} {total_input}',
+        f'ziro_llm_tokens_total{{kind="output"}} {total_output}',
+        f'ziro_llm_tokens_total{{kind="cached"}} {total_cached}',
+    ]
+
+    # Tool executions counts
+    try:
+        tracer = get_global_tracer()
+        if tracer and hasattr(tracer, "tool_execution_counts"):
+            counts = tracer.tool_execution_counts or {}
+            lines += [
+                "# HELP ziro_tool_executions_total Cumulative tool executions",
+                "# TYPE ziro_tool_executions_total counter",
+            ]
+            for (tool, status), n in counts.items():
+                lines.append(
+                    f'ziro_tool_executions_total{{tool="{tool}",status="{status}"}} {n}'
+                )
+    except Exception:
+        pass
+
+    return "\n".join(lines) + "\n"
 
 
 @app.get("/api/cost-breakdown")

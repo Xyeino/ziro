@@ -1,0 +1,50 @@
+name: api_auth
+description: API-focused audit with emphasis on auth/authz flaws.
+
+steps:
+  - id: plan
+    name: Plan + fetch API spec
+    agent: root
+    tools: [create_roe, discover_api_spec, discover_graphql_endpoint]
+    depends_on: []
+
+  - id: enum_auth
+    name: Enumerate auth mechanisms
+    agent: Recon Agent
+    skills: [authentication_jwt, oauth_flows, api_keys]
+    depends_on: [plan]
+
+  - id: bola
+    name: BOLA / IDOR sweep
+    agent: Vuln Scanner Agent
+    skills: [authorization_bola, authorization_idor]
+    depends_on: [enum_auth]
+
+  - id: mass_assignment
+    name: Mass assignment + parameter pollution
+    agent: Vuln Scanner Agent
+    skills: [mass_assignment, parameter_pollution]
+    depends_on: [enum_auth]
+
+  - id: jwt_attacks
+    name: JWT forgery + algorithm confusion
+    agent: Vuln Scanner Agent
+    skills: [authentication_jwt]
+    depends_on: [enum_auth]
+
+  - id: rate_limit
+    name: Rate limit + brute-force protection tests
+    agent: Vuln Scanner Agent
+    depends_on: [enum_auth]
+
+  - id: validate
+    name: Validate findings
+    agent: Validator Agent
+    tools: [validate_single_finding, map_to_compliance]
+    depends_on: [bola, mass_assignment, jwt_attacks, rate_limit]
+
+  - id: report
+    name: Final report
+    agent: root
+    tools: [generate_pdf_report, finish_scan]
+    depends_on: [validate]

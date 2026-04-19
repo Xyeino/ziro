@@ -1,0 +1,121 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ziro.fullname" . }}
+  labels: {{- include "ziro.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels: {{- include "ziro.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels: {{- include "ziro.selectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "ziro.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: panel
+          image: "{{ .Values.image.panel.repository }}:{{ .Values.image.panel.tag }}"
+          imagePullPolicy: {{ .Values.image.panel.pullPolicy }}
+          args: ["--panel"]
+          env:
+            - name: ZIRO_LLM
+              value: {{ .Values.llm.model | quote }}
+            - name: LLM_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.llm.existingSecret | default (printf "%s-llm" (include "ziro.fullname" .)) }}
+                  key: {{ .Values.llm.existingSecretKey | default "LLM_API_KEY" }}
+            - name: ZIRO_SCOPE_ENFORCE
+              value: {{ .Values.config.scopeEnforce | ternary "1" "0" | quote }}
+            - name: ZIRO_TOOL_FAILURE_BUDGET
+              value: {{ .Values.config.toolFailureBudget | quote }}
+            - name: ZIRO_CHECKPOINT_INTERVAL
+              value: {{ .Values.config.checkpointInterval | quote }}
+            - name: ZIRO_TOOL_CACHE_TTL
+              value: {{ .Values.config.toolCacheTtl | quote }}
+            {{- if .Values.persona }}
+            - name: ZIRO_PERSONA
+              value: {{ .Values.persona | quote }}
+            {{- end }}
+            {{- if .Values.threatActor }}
+            - name: ZIRO_THREAT_ACTOR
+              value: {{ .Values.threatActor | quote }}
+            {{- end }}
+            {{- if .Values.config.sandboxIsolation }}
+            - name: ZIRO_SANDBOX_ISOLATION
+              value: {{ .Values.config.sandboxIsolation | quote }}
+            {{- end }}
+            {{- if gt (.Values.config.rpmLimit | int) 0 }}
+            - name: ZIRO_RPM_LIMIT
+              value: {{ .Values.config.rpmLimit | quote }}
+            {{- end }}
+            {{- if .Values.dind.enabled }}
+            - name: DOCKER_HOST
+              value: "tcp://localhost:2375"
+            {{- end }}
+          ports:
+            - name: http
+              containerPort: 8420
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /api/status
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/status
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          resources: {{- toYaml .Values.resources.panel | nindent 12 }}
+          volumeMounts:
+            - name: workspace
+              mountPath: /workspace
+            - name: ziro-data
+              mountPath: /home/ziro/.ziro
+        {{- if .Values.dind.enabled }}
+        - name: dind
+          image: {{ .Values.dind.image | quote }}
+          securityContext:
+            privileged: true
+          env:
+            - name: DOCKER_TLS_CERTDIR
+              value: ""
+          resources: {{- toYaml .Values.dind.resources | nindent 12 }}
+          volumeMounts:
+            - name: dind-storage
+              mountPath: /var/lib/docker
+        {{- end }}
+      volumes:
+        - name: workspace
+        {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "ziro.fullname" . }}-workspace
+        {{- else }}
+          emptyDir: {}
+        {{- end }}
+        - name: ziro-data
+          emptyDir: {}
+        {{- if .Values.dind.enabled }}
+        - name: dind-storage
+          emptyDir: {}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations: {{- toYaml . | nindent 8 }}
+      {{- end }}

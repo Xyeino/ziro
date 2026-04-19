@@ -1,0 +1,32 @@
+<tools>
+  <tool name="replay_list_scans">
+    <description>List all replayable scan sessions (from checkpoints).</description>
+    <parameters></parameters>
+  </tool>
+
+  <tool name="replay_get_events">
+    <description>Load a paginated window of events for replay scrubber. Returns tool executions + status transitions sorted chronologically.</description>
+    <parameters>
+      <parameter name="session_id" type="string" required="true"></parameter>
+      <parameter name="offset" type="integer" required="false"></parameter>
+      <parameter name="limit" type="integer" required="false"></parameter>
+    </parameters>
+  </tool>
+
+  <tool name="replay_add_bookmark">
+    <description>Add a bookmark at a replay scrubber position — for easy jump-back during review.</description>
+    <parameters>
+      <parameter name="session_id" type="string" required="true"></parameter>
+      <parameter name="position" type="integer" required="true"></parameter>
+      <parameter name="label" type="string" required="true"></parameter>
+      <parameter name="note" type="string" required="false"></parameter>
+    </parameters>
+  </tool>
+
+  <tool name="replay_list_bookmarks">
+    <description>List saved bookmarks for a replay session.</description>
+    <parameters>
+      <parameter name="session_id" type="string" required="true"></parameter>
+    </parameters>
+  </tool>
+</tools>

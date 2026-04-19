@@ -1,0 +1,83 @@
+name: webapp_full
+description: Complete web application pentest — recon, vuln discovery, exploitation, chaining, validation.
+
+steps:
+  # Phase 0 - planning
+  - id: plan
+    name: Create engagement plan
+    agent: root
+    tools: [create_roe, create_conops, create_opplan]
+    depends_on: []
+
+  # Phase 1 - recon (can all run in parallel)
+  - id: recon_surface
+    name: External surface mapping
+    agent: Recon Agent
+    skills: [passive_osint_apis, subdomain_takeover_checks]
+    depends_on: [plan]
+
+  - id: recon_tech
+    name: Technology fingerprinting
+    agent: Recon Agent
+    tools: [detect_capabilities, download_js_bundles, analyze_js_file]
+    depends_on: [plan]
+
+  - id: recon_api
+    name: API discovery
+    agent: Recon Agent
+    tools: [discover_api_spec, discover_graphql_endpoint]
+    skills: [graphql_introspection]
+    depends_on: [plan]
+
+  # Phase 2 - vuln discovery
+  - id: vuln_injection
+    name: Injection testing (SQLi, XSS, SSTI, command)
+    agent: Vuln Scanner Agent
+    skills: [sqli, xss_reflected, xss_stored, ssti, command_injection]
+    depends_on: [recon_surface, recon_tech, recon_api]
+
+  - id: vuln_auth
+    name: Authentication & access control
+    agent: Vuln Scanner Agent
+    skills: [authentication_jwt, authorization_idor, authorization_bola, oauth_flows]
+    depends_on: [recon_surface, recon_api]
+
+  - id: vuln_ssrf
+    name: SSRF + OOB testing
+    agent: Vuln Scanner Agent
+    skills: [ssrf, xxe]
+    tools: [start_oob_listener, poll_oob_interactions]
+    depends_on: [recon_api]
+
+  - id: vuln_sca
+    name: Dependency SCA + reachability
+    agent: Vuln Scanner Agent
+    tools: [detect_lockfiles, analyze_sca_reachability, sploitus_search]
+    depends_on: [recon_tech]
+
+  # Phase 3 - exploitation
+  - id: exploit_high_sev
+    name: Build working PoCs for high+critical findings
+    agent: Exploit Agent
+    depends_on: [vuln_injection, vuln_auth, vuln_ssrf, vuln_sca]
+
+  # Phase 4 - chaining
+  - id: chain_discovery
+    name: Discover exploit chains
+    agent: root
+    tools: [discover_exploit_chains, kg_find_attack_paths]
+    depends_on: [exploit_high_sev]
+
+  # Phase 5 - validation
+  - id: validator
+    name: Re-execute PoCs, drop FPs, compute risk scores + compliance
+    agent: Validator Agent
+    tools: [list_findings_for_validation, validate_single_finding, compute_risk_score, map_to_compliance]
+    depends_on: [chain_discovery]
+
+  # Phase 6 - reporting
+  - id: report
+    name: Generate PDF + metrics
+    agent: root
+    tools: [compute_scan_metrics, generate_pdf_report, finish_scan]
+    depends_on: [validator]

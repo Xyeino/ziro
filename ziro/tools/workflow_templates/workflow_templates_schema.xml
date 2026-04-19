@@ -1,0 +1,15 @@
+<tools>
+  <tool name="list_workflow_templates">
+    <description>List available workflow templates (YAML DAGs with dependency chains). Combines built-in templates with user-contributed /workspace/workflows/*.yaml.</description>
+    <parameters></parameters>
+  </tool>
+
+  <tool name="load_workflow_template">
+    <description>Load a workflow template by name. Returns the full step DAG plus execution_order (list of parallel-executable batches in topological order).
+
+Use execution_order to drive multi-agent orchestration: each batch can run concurrently, next batch waits for previous to complete.</description>
+    <parameters>
+      <parameter name="template_name" type="string" required="true"></parameter>
+    </parameters>
+  </tool>
+</tools>

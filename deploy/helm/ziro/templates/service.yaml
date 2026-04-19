@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "ziro.fullname" . }}
+  labels: {{- include "ziro.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+      {{- if and (eq .Values.service.type "NodePort") (gt (.Values.service.nodePort | int) 0) }}
+      nodePort: {{ .Values.service.nodePort }}
+      {{- end }}
+  selector: {{- include "ziro.selectorLabels" . | nindent 4 }}

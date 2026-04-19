@@ -3,6 +3,7 @@ from .api_discovery import *  # noqa: F403
 from .api_spec import *  # noqa: F403
 from .approval_queue import *  # noqa: F403
 from .attack_graph import *  # noqa: F403
+from .autofix_pr import *  # noqa: F403
 from .batch_http import *  # noqa: F403
 from .browser import *  # noqa: F403
 from .browser_handoff import *  # noqa: F403
@@ -34,6 +35,7 @@ from .knowledge_graph import *  # noqa: F403
 from .load_skill import *  # noqa: F403
 from .metasploit import *  # noqa: F403
 from .metrics import *  # noqa: F403
+from .mobsf import *  # noqa: F403
 from .notes import *  # noqa: F403
 from .oob import *  # noqa: F403
 from .payload_encoder import *  # noqa: F403
@@ -43,6 +45,7 @@ from .pdf_report import *  # noqa: F403
 from .playbook import *  # noqa: F403
 from .proxy import *  # noqa: F403
 from .python import *  # noqa: F403
+from .replay import *  # noqa: F403
 from .registry import (
     ImplementedInClientSideOnlyError,
     get_tool_by_name,
@@ -68,6 +71,7 @@ from .todo import *  # noqa: F403
 from .tool_doc import *  # noqa: F403
 from .vector_memory import *  # noqa: F403
 from .web_search import *  # noqa: F403
+from .workflow_templates import *  # noqa: F403
 
 
 __all__ = [

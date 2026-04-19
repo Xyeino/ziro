@@ -1,0 +1,16 @@
+<tools>
+  <tool name="create_autofix_pr">
+    <description>Create a git branch with remediation commits (one per finding) and open a PR via `gh` CLI.
+
+Each finding dict must include: finding_id, title, severity, patch_diff (unified diff applied via git apply). Requires `gh` CLI authenticated against the repo's remote. Returns PR URL on success.</description>
+    <parameters>
+      <parameter name="repo_path" type="string" required="true"><description>Path to the git repo (abs or /workspace/ relative).</description></parameter>
+      <parameter name="findings" type="list" required="true"><description>List of {finding_id, title, severity, patch_diff} dicts.</description></parameter>
+      <parameter name="branch_name" type="string" required="false"></parameter>
+      <parameter name="pr_title" type="string" required="false"></parameter>
+      <parameter name="pr_body" type="string" required="false"><description>Auto-generated if empty.</description></parameter>
+      <parameter name="base_branch" type="string" required="false"><description>Auto-derived from origin/HEAD if empty.</description></parameter>
+      <parameter name="push" type="boolean" required="false"><description>Default true.</description></parameter>
+    </parameters>
+  </tool>
+</tools>

@@ -1,0 +1,51 @@
+name: cloud_aws
+description: AWS cloud security audit — IAM, S3, RDS, Lambda, credentials discovery.
+
+steps:
+  - id: plan
+    name: Engagement plan
+    agent: root
+    tools: [create_roe, create_opplan]
+    depends_on: []
+
+  - id: iam_enum
+    name: IAM enumeration
+    agent: Cloud Agent
+    skills: [aws_iam_enumeration]
+    depends_on: [plan]
+
+  - id: s3_scan
+    name: S3 bucket misconfiguration scan
+    agent: Cloud Agent
+    skills: [aws_s3_misconfig]
+    depends_on: [iam_enum]
+
+  - id: metadata_theft
+    name: SSRF → instance metadata service
+    agent: Cloud Agent
+    skills: [ssrf, aws_imds]
+    depends_on: [iam_enum]
+
+  - id: cred_hunt
+    name: Hunt for credentials in Lambda env + Secrets Manager
+    agent: Cloud Agent
+    skills: [aws_secrets_exposure]
+    depends_on: [iam_enum]
+
+  - id: priv_esc
+    name: IAM privilege escalation paths
+    agent: Cloud Agent
+    skills: [aws_iam_privesc]
+    depends_on: [cred_hunt]
+
+  - id: validate
+    name: Validate + chain
+    agent: Validator Agent
+    tools: [discover_exploit_chains, compute_risk_score, map_to_compliance]
+    depends_on: [s3_scan, metadata_theft, priv_esc]
+
+  - id: report
+    name: Report
+    agent: root
+    tools: [generate_pdf_report, finish_scan]
+    depends_on: [validate]

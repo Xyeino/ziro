@@ -1,0 +1,17 @@
+apiVersion: v2
+name: ziro
+description: Ziro AI-powered autonomous penetration testing agent
+type: application
+version: 0.1.0
+appVersion: "4.4.1"
+keywords:
+  - security
+  - pentest
+  - ai-agent
+  - llm
+home: https://github.com/Xyeino/ziro
+sources:
+  - https://github.com/Xyeino/ziro
+maintainers:
+  - name: Xyeino
+    url: https://github.com/Xyeino

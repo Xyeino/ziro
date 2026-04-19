@@ -1,0 +1,22 @@
+<tools>
+  <tool name="mobsf_static_scan">
+    <description>Upload an APK/IPA/AAB/XAPK to MobSF and run static analysis. Returns compact summary: app_name, security_score, findings by severity, dangerous permissions, trackers, secrets, domains, URLs. MobSF must be running at mobsf_url. Set MOBSF_API_KEY env var.</description>
+    <parameters>
+      <parameter name="file_path" type="string" required="true"></parameter>
+      <parameter name="mobsf_url" type="string" required="false"><description>Default http://localhost:8000.</description></parameter>
+      <parameter name="api_key" type="string" required="false"><description>If empty, reads MOBSF_API_KEY env var.</description></parameter>
+      <parameter name="poll_interval" type="number" required="false"></parameter>
+      <parameter name="poll_timeout" type="integer" required="false"></parameter>
+    </parameters>
+  </tool>
+
+  <tool name="mobsf_report">
+    <description>Fetch full / section of MobSF report JSON by hash. section: full / code_analysis / permissions / urls / secrets.</description>
+    <parameters>
+      <parameter name="file_hash" type="string" required="true"></parameter>
+      <parameter name="section" type="string" required="false"></parameter>
+      <parameter name="mobsf_url" type="string" required="false"></parameter>
+      <parameter name="api_key" type="string" required="false"></parameter>
+    </parameters>
+  </tool>
+</tools>
