@@ -327,6 +327,32 @@ async def _execute_single_tool(
     if tracer:
         execution_id = tracer.log_tool_execution_start(agent_id, tool_name, args)
 
+    # Scope enforcement — if RoE is loaded and ZIRO_SCOPE_ENFORCE=1, block any
+    # tool invocation whose extracted targets are out of scope. This prevents
+    # the agent from accidentally hitting third-party hosts.
+    try:
+        from ziro.scope import evaluate_tool_invocation
+
+        scope_decision = evaluate_tool_invocation(tool_name, args)
+        if not scope_decision.in_scope:
+            observation_xml = (
+                f"<tool_result>\n<tool_name>{tool_name}</tool_name>\n"
+                f"<error>SCOPE_VIOLATION: {scope_decision.reason}. "
+                f"Refusing to execute — this target is not covered by the "
+                f"current Rules of Engagement. Either expand the RoE via "
+                f"create_roe with the correct in_scope list, or pick a "
+                f"different target in scope.</error>\n</tool_result>"
+            )
+            _update_tracer_with_result(
+                tracer, execution_id, True,
+                {"error": "scope_violation", "reason": scope_decision.reason},
+                {"error": "scope_violation"},
+            )
+            return observation_xml, [], False
+    except Exception:  # noqa: BLE001
+        # Scope enforcement failure is non-fatal — fall through and execute
+        pass
+
     try:
         result = await execute_tool_invocation(tool_inv, agent_state)
 

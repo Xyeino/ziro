@@ -15,6 +15,7 @@ from .executor import (
     validate_tool_availability,
 )
 from .engagement_plan import *  # noqa: F403
+from .engagement_state import *  # noqa: F403
 from .file_edit import *  # noqa: F403
 from .finish import *  # noqa: F403
 from .js_analysis import *  # noqa: F403

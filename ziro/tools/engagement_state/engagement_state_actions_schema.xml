@@ -1,0 +1,70 @@
+<tools>
+  <tool name="record_host">
+    <description>Record a discovered host into the engagement state. Call for every new host (subdomain enum, nmap, passive DNS) so the engagement_state block in the system prompt stays fresh.</description>
+    <parameters>
+      <parameter name="host" type="string" required="true"><description>Hostname or domain.</description></parameter>
+      <parameter name="ip" type="string" required="false"><description>Resolved IP.</description></parameter>
+      <parameter name="open_ports" type="list" required="false"><description>List of open port numbers.</description></parameter>
+      <parameter name="technologies" type="list" required="false"><description>Detected tech stack (e.g., ['nginx', 'php-8.1', 'wordpress']).</description></parameter>
+      <parameter name="waf" type="string" required="false"><description>Detected WAF vendor.</description></parameter>
+      <parameter name="notes" type="string" required="false"><description>Freeform observation.</description></parameter>
+    </parameters>
+  </tool>
+
+  <tool name="record_service">
+    <description>Record a discovered service (nmap -sV output, httpx fingerprint).</description>
+    <parameters>
+      <parameter name="host" type="string" required="true"></parameter>
+      <parameter name="port" type="integer" required="true"></parameter>
+      <parameter name="protocol" type="string" required="false"><description>tcp/udp. Default tcp.</description></parameter>
+      <parameter name="product" type="string" required="false"><description>Product name (nginx, sshd, etc.)</description></parameter>
+      <parameter name="version" type="string" required="false"></parameter>
+      <parameter name="url" type="string" required="false"><description>If HTTP, the base URL.</description></parameter>
+      <parameter name="notes" type="string" required="false"></parameter>
+    </parameters>
+  </tool>
+
+  <tool name="record_credential">
+    <description>Record a discovered credential or token. Call when you find creds in JS bundles, leaked configs, default passwords working, a successful auth response. Set validated=true only after you've proven the credential works.</description>
+    <parameters>
+      <parameter name="source" type="string" required="true"><description>Where it came from (e.g., 'leaked in main.js', 'default admin:admin', 'recovered from 500 response').</description></parameter>
+      <parameter name="username" type="string" required="false"></parameter>
+      <parameter name="password" type="string" required="false"></parameter>
+      <parameter name="token" type="string" required="false"></parameter>
+      <parameter name="token_type" type="string" required="false"><description>jwt / bearer / session_cookie / api_key / service_role</description></parameter>
+      <parameter name="validated" type="boolean" required="false"><description>True if proven to work.</description></parameter>
+      <parameter name="access_level" type="string" required="false"><description>user / admin / service_role / read-only</description></parameter>
+      <parameter name="host" type="string" required="false"></parameter>
+    </parameters>
+  </tool>
+
+  <tool name="record_session">
+    <description>Record an active session (HTTP cookie, SSH handle, C2 implant session).</description>
+    <parameters>
+      <parameter name="host" type="string" required="true"></parameter>
+      <parameter name="session_type" type="string" required="true"><description>http_cookie / ssh / c2_implant / authenticated_api</description></parameter>
+      <parameter name="identifier" type="string" required="false"><description>Session ID or identifier.</description></parameter>
+      <parameter name="expires_at" type="string" required="false"></parameter>
+    </parameters>
+  </tool>
+
+  <tool name="record_finding">
+    <description>Record a finding in the engagement state for quick reference in the prompt. DIFFERENT from create_vulnerability_report — this is a lightweight state entry, the full report is produced separately.</description>
+    <parameters>
+      <parameter name="finding_id" type="string" required="true"></parameter>
+      <parameter name="title" type="string" required="true"></parameter>
+      <parameter name="severity" type="string" required="true"><description>CRITICAL / HIGH / MEDIUM / LOW / INFO</description></parameter>
+      <parameter name="vuln_type" type="string" required="true"><description>sqli / xss / ssrf / auth_bypass / ...</description></parameter>
+      <parameter name="endpoint" type="string" required="false"></parameter>
+      <parameter name="status" type="string" required="false"><description>unconfirmed / potential / confirmed / false_positive</description></parameter>
+      <parameter name="confidence" type="number" required="false"></parameter>
+    </parameters>
+  </tool>
+
+  <tool name="view_engagement_state">
+    <description>Return the current engagement state snapshot (summary + XML block).</description>
+    <parameters>
+      <parameter name="include_notes" type="boolean" required="false"><description>Include free-form notes section.</description></parameter>
+    </parameters>
+  </tool>
+</tools>

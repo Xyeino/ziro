@@ -577,3 +577,9 @@ Default user: pentester (sudo available)
 {% if threat_actor_prompt %}
 {{ threat_actor_prompt }}
 {% endif %}
+
+{% if engagement_state_xml %}
+{{ engagement_state_xml }}
+
+**Engagement state reference**: The block above is the live, deduplicated state of everything this scan has learned so far — hosts, services, credentials, active sessions, findings. It updates as tools record observations. Reference it before issuing tool calls to avoid rediscovering facts or re-scanning ports you already have.
+{% endif %}

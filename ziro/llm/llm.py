@@ -155,6 +155,19 @@ class LLM:
             except Exception:  # noqa: BLE001
                 skills_catalog = None
 
+            # Engagement state — typed facts about hosts/services/creds/sessions/
+            # findings injected into system prompt. Updated as tools record
+            # observations, so every LLM call sees the latest consolidated view.
+            try:
+                from ziro.engagement import get_engagement_state
+
+                engagement_state_xml = get_engagement_state().to_prompt_block(compact=True)
+                # Skip entirely if the state is empty to save tokens
+                if engagement_state_xml.count("\n") < 4:
+                    engagement_state_xml = None
+            except Exception:  # noqa: BLE001
+                engagement_state_xml = None
+
             # Pre-filter tools prompt by scan mode and agent role so the
             # per-call system prompt only contains tools this agent can/should
             # use. Root-only tools (create_agent, finish_scan, create_roe etc)
@@ -176,6 +189,7 @@ class LLM:
                 system_prompt_context=self._system_prompt_context,
                 threat_actor_prompt=getattr(self.config, "threat_actor_prompt", None),
                 skills_catalog=skills_catalog,
+                engagement_state_xml=engagement_state_xml,
                 **skill_content,
             )
             if getattr(self.config, "threat_actor_prompt", None):
