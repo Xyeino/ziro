@@ -1,0 +1,18 @@
+<tools>
+  <tool name="generate_pdf_report">
+    <description>Render a branded PDF pentest report from tracker findings.
+
+Pulls findings from tracer, sorts by severity + CVSS, composes cover page, exec summary, methodology, findings index, detailed finding cards with title/severity/CVSS/OWASP/compliance/description/impact/technical analysis/PoC/remediation. Color-coded severity. Requires reportlab.</description>
+    <parameters>
+      <parameter name="output_path" type="string" required="false"><description>Default /workspace/report.pdf.</description></parameter>
+      <parameter name="client_name" type="string" required="false"></parameter>
+      <parameter name="engagement_name" type="string" required="false"></parameter>
+      <parameter name="authorized_by" type="string" required="false"></parameter>
+      <parameter name="executive_summary" type="string" required="false"><description>Freeform exec summary. Auto-generated if empty.</description></parameter>
+      <parameter name="methodology" type="string" required="false"></parameter>
+      <parameter name="include_technical_details" type="boolean" required="false"></parameter>
+      <parameter name="include_pocs" type="boolean" required="false"></parameter>
+      <parameter name="include_compliance" type="boolean" required="false"></parameter>
+    </parameters>
+  </tool>
+</tools>

@@ -1,0 +1,48 @@
+<tools>
+  <tool name="kg_add_node">
+    <description>Add a node to the knowledge graph. Graph enables attack path discovery across hosts / services / credentials / findings / sessions / users / tokens.</description>
+    <parameters>
+      <parameter name="node_id" type="string" required="true"></parameter>
+      <parameter name="kind" type="string" required="true"><description>host / service / credential / finding / session / user / token / path</description></parameter>
+      <parameter name="label" type="string" required="false"></parameter>
+      <parameter name="attrs" type="dict" required="false"></parameter>
+    </parameters>
+  </tool>
+
+  <tool name="kg_add_edge">
+    <description>Add a directed edge between two graph nodes. Edge kinds: hosts_service, runs_on, accessible_from, leaks, pivots_to, authenticates_with, grants_access, exploits, chains_to, owned_by, child_of, maps_to_cve.
+
+Use weight &lt;1 for easy/high-confidence paths, &gt;1 for difficult ones. Attack path discovery uses Dijkstra so lower total weight = preferred chain.</description>
+    <parameters>
+      <parameter name="source" type="string" required="true"></parameter>
+      <parameter name="target" type="string" required="true"></parameter>
+      <parameter name="kind" type="string" required="true"></parameter>
+      <parameter name="weight" type="number" required="false"><description>Default 1.0.</description></parameter>
+      <parameter name="attrs" type="dict" required="false"></parameter>
+    </parameters>
+  </tool>
+
+  <tool name="kg_find_attack_paths">
+    <description>Discover multi-hop attack chains ending at target node.
+
+Returns paths ordered by total weight (easiest chain first). Use to answer 'what combination of findings leads to compromise of &lt;critical resource&gt;?' — automatically chains IDOR + leaked creds + SSRF + RCE etc.</description>
+    <parameters>
+      <parameter name="target_node" type="string" required="true"></parameter>
+      <parameter name="max_paths" type="integer" required="false"><description>Default 5.</description></parameter>
+      <parameter name="max_length" type="integer" required="false"><description>Default 8.</description></parameter>
+    </parameters>
+  </tool>
+
+  <tool name="kg_shortest_path">
+    <description>Shortest path between two graph nodes by edge weight.</description>
+    <parameters>
+      <parameter name="source" type="string" required="true"></parameter>
+      <parameter name="target" type="string" required="true"></parameter>
+    </parameters>
+  </tool>
+
+  <tool name="kg_summary">
+    <description>Graph statistics + mermaid diagram snippet for visualization in panel.</description>
+    <parameters></parameters>
+  </tool>
+</tools>

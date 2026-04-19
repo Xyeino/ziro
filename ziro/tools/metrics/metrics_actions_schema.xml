@@ -1,0 +1,8 @@
+<tools>
+  <tool name="compute_scan_metrics">
+    <description>Return quality and cost metrics for the current scan: total findings by severity/status, total LLM cost, cost-per-confirmed-finding, FP rate, mean iterations per agent, time elapsed.
+
+Call at scan end before finish_scan, then include numbers in the final report.</description>
+    <parameters></parameters>
+  </tool>
+</tools>

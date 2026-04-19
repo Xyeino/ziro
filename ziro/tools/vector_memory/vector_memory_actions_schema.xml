@@ -1,0 +1,22 @@
+<tools>
+  <tool name="memory_store">
+    <description>Store an observation in semantic memory. Use for things worth remembering across iterations — unusual HTTP responses, free-form observations, leaked hints from error messages.</description>
+    <parameters>
+      <parameter name="text" type="string" required="true"></parameter>
+      <parameter name="scope" type="string" required="false"><description>scan / task / subagent / finding</description></parameter>
+      <parameter name="scope_id" type="string" required="false"></parameter>
+      <parameter name="attrs" type="dict" required="false"></parameter>
+    </parameters>
+  </tool>
+
+  <tool name="memory_search">
+    <description>Semantic search over stored observations. Returns most-similar entries with cosine similarity. 'Did I see something about JWT handling earlier?' type queries.</description>
+    <parameters>
+      <parameter name="query" type="string" required="true"></parameter>
+      <parameter name="scope" type="string" required="false"></parameter>
+      <parameter name="scope_id" type="string" required="false"></parameter>
+      <parameter name="top_k" type="integer" required="false"><description>Default 10.</description></parameter>
+      <parameter name="min_similarity" type="number" required="false"><description>Default 0.15.</description></parameter>
+    </parameters>
+  </tool>
+</tools>

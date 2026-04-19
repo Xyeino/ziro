@@ -28,12 +28,16 @@ from .git_history import *  # noqa: F403
 from .host_header_fuzz import *  # noqa: F403
 from .install_on_demand import *  # noqa: F403
 from .js_analysis import *  # noqa: F403
+from .knowledge_graph import *  # noqa: F403
 from .load_skill import *  # noqa: F403
 from .metasploit import *  # noqa: F403
+from .metrics import *  # noqa: F403
 from .notes import *  # noqa: F403
+from .oob import *  # noqa: F403
 from .payload_encoder import *  # noqa: F403
 from .payload_lib import *  # noqa: F403
 from .pcap_capture import *  # noqa: F403
+from .pdf_report import *  # noqa: F403
 from .playbook import *  # noqa: F403
 from .proxy import *  # noqa: F403
 from .python import *  # noqa: F403
@@ -58,6 +62,7 @@ from .thinking import *  # noqa: F403
 from .tmux_interactive import *  # noqa: F403
 from .todo import *  # noqa: F403
 from .tool_doc import *  # noqa: F403
+from .vector_memory import *  # noqa: F403
 from .web_search import *  # noqa: F403
 
 

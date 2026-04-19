@@ -2124,6 +2124,14 @@ async def create_scan(req: CreateScanRequest) -> dict[str, Any]:
             "max_iterations": 300,
         }
 
+        # Auto-start checkpoint loop so the scan can be resumed if panel crashes
+        try:
+            from ziro.persistence import start_checkpoint_loop
+
+            start_checkpoint_loop(run_name or "default")
+        except Exception:
+            pass
+
         async def _run() -> None:
             agent = ZiroAgent(agent_config)
             await agent.execute_scan(scan_config)
@@ -2207,6 +2215,42 @@ async def stop_scan() -> dict[str, str]:
 class SendMessageRequest(BaseModel):
     agent_id: str = ""
     message: str
+
+
+@app.get("/api/checkpoints")
+async def list_checkpoints() -> dict[str, Any]:
+    """List available scan checkpoint sessions for resume."""
+    try:
+        from ziro.persistence import list_checkpoint_sessions
+
+        return {"sessions": list_checkpoint_sessions()}
+    except Exception as e:
+        return {"sessions": [], "error": str(e)}
+
+
+@app.post("/api/checkpoints/save")
+async def save_checkpoint(body: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Force-write a checkpoint now (operator click from panel)."""
+    session_id = (body or {}).get("session_id", "default")
+    try:
+        from ziro.persistence import write_checkpoint
+
+        path = write_checkpoint(session_id)
+        return {"status": "ok" if path else "failed", "path": path}
+    except Exception as e:
+        return {"status": "failed", "error": str(e)}
+
+
+@app.post("/api/checkpoints/restore")
+async def restore_checkpoint(body: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Restore engagement state + knowledge graph from latest checkpoint."""
+    session_id = (body or {}).get("session_id", "default")
+    try:
+        from ziro.persistence import restore_from_checkpoint
+
+        return restore_from_checkpoint(session_id)
+    except Exception as e:
+        return {"success": False, "error": str(e)}
 
 
 @app.get("/api/approvals")

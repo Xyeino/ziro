@@ -1,0 +1,26 @@
+<tools>
+  <tool name="start_oob_listener">
+    <description>Start interactsh-client session — generates unique callback domain like c0f5jn.oast.fun.
+
+Embed in blind SSRF/XXE/SQLi/SSTI/RCE payloads to confirm the target actually reached out. Call poll_oob_interactions to see which payloads triggered.</description>
+    <parameters>
+      <parameter name="server" type="string" required="false"><description>oast.fun / oast.online / oast.me / interact.sh. Default oast.fun.</description></parameter>
+      <parameter name="session_name" type="string" required="false"></parameter>
+    </parameters>
+  </tool>
+
+  <tool name="poll_oob_interactions">
+    <description>Poll for callbacks on an OOB listener session. Returns protocol (DNS/HTTP/SMTP), source IP, timestamp, raw request preview.</description>
+    <parameters>
+      <parameter name="session_id" type="string" required="true"></parameter>
+      <parameter name="wait_seconds" type="number" required="false"><description>Wait before polling. Default 0.</description></parameter>
+    </parameters>
+  </tool>
+
+  <tool name="stop_oob_listener">
+    <description>Stop interactsh-client session, return total callbacks seen.</description>
+    <parameters>
+      <parameter name="session_id" type="string" required="true"></parameter>
+    </parameters>
+  </tool>
+</tools>
