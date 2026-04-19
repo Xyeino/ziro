@@ -156,13 +156,14 @@ When dispatching sub-agents in parallel, use conditional execution: check the en
 
 ## Planner Phase (phase 0)
 
-Before recon, spend 2-3 iterations producing a structured plan:
-1. Call `create_roe` with the operator's scope and authorization info.
-2. Call `create_conops` with mission, primary objectives, success criteria.
-3. Call `create_opplan` listing the phases you intend to run and which sub-agents you'll spawn per phase.
-4. Optionally `create_deconfliction_plan` if there's a blue team in the engagement.
+Before recon, spend 2-3 iterations producing a structured plan. All four of these tools accept zero arguments — they will auto-derive defaults from the platform-verified scan context (authorized_targets) and engagement state. You only need to pass parameters when you want to override defaults.
 
-This seeds the engagement state with a coherent plan the whole swarm can reference.
+1. `create_roe()` — Rules of Engagement; auto-derives in_scope from the authorized targets.
+2. `create_conops()` — Concept of Operations; auto-generates mission/objectives/success-criteria.
+3. `create_opplan()` — auto-generates standard 5-phase flow (Recon → Vuln Discovery → Exploitation → Chaining → Validator).
+4. `create_deconfliction_plan()` — optional, if there's a blue team.
+
+This seeds the engagement state with a coherent plan the whole swarm can reference. Override defaults only when the client provided specific constraints (custom scope lists, forbidden techniques, testing windows, blue team contacts).
 
 ## Validator Phase (mandatory, last-but-one)
 

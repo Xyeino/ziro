@@ -51,11 +51,11 @@ def _read(path: str) -> str | None:
 @register_tool(sandbox_execution=True, agent_roles=["root"])
 def create_roe(
     agent_state: Any,
-    engagement_name: str,
-    client_name: str,
-    authorized_by: str,
-    in_scope: list[str],
-    out_of_scope: list[str],
+    engagement_name: str = "",
+    client_name: str = "",
+    authorized_by: str = "",
+    in_scope: list[str] | None = None,
+    out_of_scope: list[str] | None = None,
     allowed_techniques: list[str] | None = None,
     forbidden_techniques: list[str] | None = None,
     testing_window_start: str = "",
@@ -70,13 +70,54 @@ def create_roe(
 ) -> dict[str, Any]:
     """Draft the formal Rules of Engagement document for this scan.
 
-    The RoE is the authoritative scope and authorization statement. Every
-    subsequent tool call by any agent should be validated against it. Produces
-    a markdown document at /workspace/engagement/roe.md and a machine-readable
-    JSON digest at /workspace/engagement/roe.json that the orchestrator can
-    consult on every tool invocation.
+    All parameters are optional — missing values are auto-derived from the
+    platform-verified scan context (authorized_targets from system prompt).
+    You can call `create_roe()` with zero arguments at scan start and it will
+    produce a sensible default RoE from the scan metadata.
+
+    Produces /workspace/engagement/roe.md (markdown) and /workspace/engagement/
+    roe.json (machine-readable).
     """
     try:
+        # Auto-derive defaults from engagement state / agent state so empty calls work
+        if not engagement_name or not in_scope:
+            target_urls: list[str] = []
+            try:
+                from ziro.engagement import get_engagement_state
+
+                est = get_engagement_state()
+                if est.target:
+                    target_urls.append(est.target)
+            except Exception:
+                pass
+            # Also read authorized_targets from the agent's LLM system prompt context
+            try:
+                if agent_state is not None and hasattr(agent_state, "_llm_instance"):
+                    ctx = getattr(agent_state._llm_instance, "system_prompt_context", None) or {}
+                    for t in (ctx.get("authorized_targets") or []):
+                        v = t.get("value")
+                        if v and v not in target_urls:
+                            target_urls.append(v)
+            except Exception:
+                pass
+
+            if target_urls:
+                from urllib.parse import urlparse
+
+                first_host = urlparse(target_urls[0]).hostname or target_urls[0]
+                if not engagement_name:
+                    engagement_name = f"Scan — {first_host}"
+                if not client_name:
+                    client_name = first_host
+                if not in_scope:
+                    in_scope = list(target_urls)
+
+        engagement_name = engagement_name or "Ziro Security Assessment"
+        client_name = client_name or "Platform Operator"
+        authorized_by = authorized_by or "Platform-verified authorized scope (system-injected)"
+        in_scope = in_scope or []
+        out_of_scope = out_of_scope or []
+
         allowed_techniques = allowed_techniques or []
         forbidden_techniques = forbidden_techniques or []
 
@@ -180,10 +221,10 @@ def create_roe(
 @register_tool(sandbox_execution=True, agent_roles=["root"])
 def create_conops(
     agent_state: Any,
-    engagement_name: str,
-    mission_statement: str,
-    primary_objectives: list[str],
-    success_criteria: list[str],
+    engagement_name: str = "",
+    mission_statement: str = "",
+    primary_objectives: list[str] | None = None,
+    success_criteria: list[str] | None = None,
     threat_actor_profile: str = "",
     testing_approach: str = "",
     assumed_starting_point: str = "external",
@@ -191,11 +232,50 @@ def create_conops(
 ) -> dict[str, Any]:
     """Draft the Concept of Operations — mission, objectives, adversary model, approach.
 
-    The ConOps answers "what are we simulating, why, and how" in a way the
-    client can read. Writes to /workspace/engagement/<slug>/conops.md.
+    All parameters are optional; missing ones are auto-derived from engagement
+    state. Writes to /workspace/engagement/<slug>/conops.md.
     """
     try:
+        primary_objectives = primary_objectives or []
+        success_criteria = success_criteria or []
         kill_chain_focus = kill_chain_focus or []
+
+        # Auto-derive engagement_name
+        if not engagement_name:
+            try:
+                from ziro.engagement import get_engagement_state
+
+                est = get_engagement_state()
+                if est.target:
+                    from urllib.parse import urlparse
+
+                    engagement_name = f"Scan — {urlparse(est.target).hostname or est.target}"
+            except Exception:
+                pass
+        engagement_name = engagement_name or "Ziro Security Assessment"
+
+        # Defaults for mission / objectives / criteria
+        if not mission_statement:
+            mission_statement = (
+                "Identify, validate, and document exploitable vulnerabilities across the "
+                "in-scope targets so the client can remediate before real-world exploitation. "
+                "Operate autonomously within the declared Rules of Engagement."
+            )
+        if not primary_objectives:
+            primary_objectives = [
+                "Enumerate and map the external attack surface",
+                "Identify vulnerabilities across OWASP Top 10 categories",
+                "Validate findings by reproducing a working exploit path",
+                "Chain individual issues into higher-impact scenarios where possible",
+            ]
+        if not success_criteria:
+            success_criteria = [
+                "Every reported finding has a reproducible PoC artifact",
+                "No out-of-scope systems were touched",
+                "Findings are triaged by severity with business-impact rationale",
+                "Remediation guidance is included in the final report",
+            ]
+
         slug = _sanitize_slug(engagement_name)
 
         md = f"""# Concept of Operations — {engagement_name}
@@ -243,8 +323,8 @@ See the [Rules of Engagement](./roe.md) for the authoritative scope and prohibit
 @register_tool(sandbox_execution=True, agent_roles=["root"])
 def create_opplan(
     agent_state: Any,
-    engagement_name: str,
-    phases: list[dict[str, Any]],
+    engagement_name: str = "",
+    phases: list[dict[str, Any]] | None = None,
     estimated_duration: str = "",
     required_tools: list[str] | None = None,
     risk_considerations: list[str] | None = None,
@@ -266,6 +346,57 @@ def create_opplan(
     try:
         required_tools = required_tools or []
         risk_considerations = risk_considerations or []
+        phases = phases or []
+
+        # Auto-derive engagement_name from engagement state
+        if not engagement_name:
+            try:
+                from ziro.engagement import get_engagement_state
+
+                est = get_engagement_state()
+                if est.target:
+                    from urllib.parse import urlparse
+
+                    engagement_name = f"Scan — {urlparse(est.target).hostname or est.target}"
+            except Exception:
+                pass
+        engagement_name = engagement_name or "Ziro Security Assessment"
+
+        # Default phases if empty — standard pentest flow
+        if not phases:
+            phases = [
+                {
+                    "name": "Phase 1 — Reconnaissance",
+                    "objective": "Map external attack surface, enumerate subdomains, technologies, endpoints",
+                    "agents": ["Recon Agent"],
+                    "duration": "1-2 hours",
+                },
+                {
+                    "name": "Phase 2 — Vulnerability Discovery",
+                    "objective": "Scan and probe for OWASP Top 10 + framework-specific issues",
+                    "agents": ["Vuln Scanner Agent"],
+                    "duration": "2-4 hours",
+                },
+                {
+                    "name": "Phase 3 — Exploitation & Validation",
+                    "objective": "Build working PoCs for each discovered issue",
+                    "agents": ["Exploit Agent"],
+                    "duration": "2-6 hours",
+                },
+                {
+                    "name": "Phase 4 — Chaining & Impact Analysis",
+                    "objective": "Combine findings for max impact; run discover_exploit_chains",
+                    "agents": ["Root Agent"],
+                    "duration": "1-2 hours",
+                },
+                {
+                    "name": "Phase 5 — Validator Pass",
+                    "objective": "Re-execute every PoC; drop false positives; compute risk scores and compliance mapping",
+                    "agents": ["Validator Agent"],
+                    "duration": "1 hour",
+                },
+            ]
+
         slug = _sanitize_slug(engagement_name)
 
         phase_blocks = []
@@ -348,7 +479,7 @@ def create_opplan(
 @register_tool(sandbox_execution=True, agent_roles=["root"])
 def create_deconfliction_plan(
     agent_state: Any,
-    engagement_name: str,
+    engagement_name: str = "",
     concurrent_operations: list[str] | None = None,
     blue_team_contacts: list[str] | None = None,
     ioc_notification_plan: str = "",
@@ -357,10 +488,23 @@ def create_deconfliction_plan(
 ) -> dict[str, Any]:
     """Draft the Deconfliction Plan — how to coordinate with blue team and avoid confusion.
 
-    Produces /workspace/engagement/<slug>/deconfliction.md covering how tester
-    activity is distinguished from real incidents and how to stop on request.
+    All parameters optional; missing values auto-derived or defaulted. Produces
+    /workspace/engagement/<slug>/deconfliction.md.
     """
     try:
+        # Auto-derive engagement_name
+        if not engagement_name:
+            try:
+                from ziro.engagement import get_engagement_state
+
+                est = get_engagement_state()
+                if est.target:
+                    from urllib.parse import urlparse
+
+                    engagement_name = f"Scan — {urlparse(est.target).hostname or est.target}"
+            except Exception:
+                pass
+        engagement_name = engagement_name or "Ziro Security Assessment"
         concurrent_operations = concurrent_operations or []
         blue_team_contacts = blue_team_contacts or []
         pause_conditions = pause_conditions or [

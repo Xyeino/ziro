@@ -2,24 +2,24 @@
   <tool name="create_roe">
     <description>Create the formal Rules of Engagement document for this scan.
 
-Call this FIRST, before any recon or exploitation activity, so every downstream decision can be validated against a written scope. Produces two files in the sandbox: `/workspace/engagement/&lt;slug&gt;/roe.md` (human-readable) and `roe.json` (machine-readable digest).
+All parameters are OPTIONAL — calling create_roe() with zero arguments auto-derives defaults from the platform-verified scan context (authorized_targets, engagement state target URL). Call this FIRST, at scan start. Produces /workspace/engagement/&lt;slug&gt;/roe.md + roe.json.
 
-The RoE is the authoritative authorization statement from the client. If any in-flight operation would exceed the scope defined here, STOP and ask for clarification.</description>
+Only pass parameters when you need to override defaults (client provided specific forbidden techniques, testing window, etc.).</description>
     <parameters>
-      <parameter name="engagement_name" type="string" required="true">
-        <description>Short name for this engagement (e.g., "acme_q2_webapp_audit"). Used as the slug for the output directory.</description>
+      <parameter name="engagement_name" type="string" required="false">
+        <description>Auto-derived from target hostname if not provided.</description>
       </parameter>
-      <parameter name="client_name" type="string" required="true">
-        <description>Legal or display name of the client organization.</description>
+      <parameter name="client_name" type="string" required="false">
+        <description>Auto-derived from target hostname if not provided.</description>
       </parameter>
-      <parameter name="authorized_by" type="string" required="true">
-        <description>Name and title of the person at the client who authorized the engagement.</description>
+      <parameter name="authorized_by" type="string" required="false">
+        <description>Defaults to "Platform-verified authorized scope".</description>
       </parameter>
-      <parameter name="in_scope" type="list" required="true">
-        <description>List of in-scope targets: domains, IPs, CIDR ranges, application paths, API endpoints. Be specific.</description>
+      <parameter name="in_scope" type="list" required="false">
+        <description>Auto-derived from platform authorized_targets if not provided.</description>
       </parameter>
-      <parameter name="out_of_scope" type="list" required="true">
-        <description>Explicitly out-of-scope systems. Third-party services, production databases, customer data stores.</description>
+      <parameter name="out_of_scope" type="list" required="false">
+        <description>Defaults to empty list (everything outside in_scope is implicitly out-of-scope).</description>
       </parameter>
       <parameter name="allowed_techniques" type="list" required="false">
         <description>Optional list of allowed techniques (e.g., "SQL injection testing", "XSS reflection"). Leave empty to allow all standard pentest techniques except forbidden_techniques.</description>
@@ -61,21 +61,19 @@ The RoE is the authoritative authorization statement from the client. If any in-
   </tool>
 
   <tool name="create_conops">
-    <description>Create the Concept of Operations — mission, objectives, adversary model, starting posture.
-
-Call this after create_roe. The ConOps answers "what are we simulating, why, and how" and is used by the root agent to stay aligned with the engagement's strategic goals. Writes to `/workspace/engagement/&lt;slug&gt;/conops.md`.</description>
+    <description>Create the Concept of Operations. All parameters optional — auto-generates standard mission/objectives/success-criteria from engagement context if empty. Writes to /workspace/engagement/&lt;slug&gt;/conops.md.</description>
     <parameters>
-      <parameter name="engagement_name" type="string" required="true">
-        <description>Same name used in create_roe (for slug consistency).</description>
+      <parameter name="engagement_name" type="string" required="false">
+        <description>Auto-derived from target if empty.</description>
       </parameter>
-      <parameter name="mission_statement" type="string" required="true">
-        <description>One-paragraph mission statement — why this engagement exists.</description>
+      <parameter name="mission_statement" type="string" required="false">
+        <description>Auto-generated if empty.</description>
       </parameter>
-      <parameter name="primary_objectives" type="list" required="true">
-        <description>Ordered list of concrete objectives (e.g., "Demonstrate external-to-internal compromise path", "Identify OWASP Top 10 exposures in the customer portal").</description>
+      <parameter name="primary_objectives" type="list" required="false">
+        <description>Auto-generated standard objectives if empty.</description>
       </parameter>
-      <parameter name="success_criteria" type="list" required="true">
-        <description>What defines a successful engagement — deliverables, findings quality bar, evidence standards.</description>
+      <parameter name="success_criteria" type="list" required="false">
+        <description>Auto-generated standard criteria if empty.</description>
       </parameter>
       <parameter name="threat_actor_profile" type="string" required="false">
         <description>Name of a threat actor being emulated (apt29, apt28, lazarus, fin7, scattered_spider) or free-form description. Leave empty for generic attacker.</description>
@@ -96,15 +94,13 @@ Call this after create_roe. The ConOps answers "what are we simulating, why, and
   </tool>
 
   <tool name="create_opplan">
-    <description>Create the Operations Plan — phased execution playbook with agents, skills, techniques per phase.
-
-Call this after create_conops. The OPPLAN is the step-by-step plan the root agent executes and that sub-agents reference when starting work. Writes to `/workspace/engagement/&lt;slug&gt;/opplan.md` and a JSON digest.</description>
+    <description>Create the Operations Plan. Both engagement_name and phases are optional — with empty phases, auto-generates a standard 5-phase flow (Recon → Vuln Discovery → Exploitation → Chaining → Validator). Writes /workspace/engagement/&lt;slug&gt;/opplan.md + JSON.</description>
     <parameters>
-      <parameter name="engagement_name" type="string" required="true">
-        <description>Same name used in create_roe.</description>
+      <parameter name="engagement_name" type="string" required="false">
+        <description>Auto-derived if empty.</description>
       </parameter>
-      <parameter name="phases" type="list" required="true">
-        <description>Ordered list of phase dicts. Each phase should include: name, objective, agents, skills, techniques, duration, deliverables. See examples for structure.</description>
+      <parameter name="phases" type="list" required="false">
+        <description>If empty, uses the standard 5-phase flow. Each phase dict: name, objective, agents, skills, techniques, duration, deliverables.</description>
       </parameter>
       <parameter name="estimated_duration" type="string" required="false">
         <description>Total estimated duration (e.g., "4 hours", "2 days").</description>
@@ -125,12 +121,10 @@ Call this after create_conops. The OPPLAN is the step-by-step plan the root agen
   </tool>
 
   <tool name="create_deconfliction_plan">
-    <description>Create the Deconfliction Plan — how to coordinate with the blue team and avoid mistaking test activity for real incidents.
-
-Call this after create_opplan if the engagement involves an active blue team, SOC, or incident response team. Defines IOC notification, artifact tagging, and pause conditions. Writes to `/workspace/engagement/&lt;slug&gt;/deconfliction.md`.</description>
+    <description>Create the Deconfliction Plan — how to coordinate with the blue team. Optional for engagements without active blue team. All parameters optional.</description>
     <parameters>
-      <parameter name="engagement_name" type="string" required="true">
-        <description>Same name used in create_roe.</description>
+      <parameter name="engagement_name" type="string" required="false">
+        <description>Auto-derived if empty.</description>
       </parameter>
       <parameter name="concurrent_operations" type="list" required="false">
         <description>Any other operations or engagements the client has in parallel that might collide.</description>
