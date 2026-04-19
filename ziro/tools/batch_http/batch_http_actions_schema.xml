@@ -1,0 +1,17 @@
+<tools>
+  <tool name="batch_http_get">
+    <description>Execute up to 50 parallel HTTP GETs as a single tool call.
+
+Replaces chains of individual terminal_execute + curl when probing many URLs (recon sweeps, IDOR sweeps across user IDs, directory bruteforce, shadow endpoint discovery). Returns per-URL status, size, body_preview. Caps at 50 per call.
+
+Example: checking 40 candidate admin paths in one call instead of 40 separate curl invocations — faster AND saves tokens.</description>
+    <parameters>
+      <parameter name="urls" type="list" required="true"><description>Up to 50 absolute URLs to probe.</description></parameter>
+      <parameter name="user_agent" type="string" required="false"></parameter>
+      <parameter name="timeout" type="number" required="false"><description>Per-request timeout. Default 10s.</description></parameter>
+      <parameter name="concurrency" type="integer" required="false"><description>Max parallel. Default 10.</description></parameter>
+      <parameter name="follow_redirects" type="boolean" required="false"></parameter>
+      <parameter name="return_body_preview" type="integer" required="false"><description>Chars of body to return per URL. Default 200.</description></parameter>
+    </parameters>
+  </tool>
+</tools>

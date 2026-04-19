@@ -48,3 +48,22 @@ class LLMConfig:
             if profile:
                 self.threat_actor = profile.name
                 self.threat_actor_prompt = render_threat_actor_prompt(profile)
+
+        # Agent persona — specialist profile (webapp/api/cloud/mobile/...)
+        # Applied via ZIRO_PERSONA env var or scan config. Seeds the agent's
+        # system prompt with a focused expertise block.
+        self.persona: str | None = None
+        self.persona_prompt: str | None = None
+        import os as _os
+
+        persona_name = _os.getenv("ZIRO_PERSONA", "").strip()
+        if persona_name:
+            from ziro.personas import get_persona
+
+            p = get_persona(persona_name)
+            if p:
+                self.persona = p.name
+                self.persona_prompt = p.prompt_block
+                # Auto-add persona's default skills if caller didn't specify any
+                if not self.skills and p.default_skills:
+                    self.skills = list(p.default_skills)

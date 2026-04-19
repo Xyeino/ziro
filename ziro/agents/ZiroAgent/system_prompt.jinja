@@ -574,6 +574,12 @@ Default user: pentester (sudo available)
 </specialized_knowledge>
 {% endif %}
 
+{% if persona_prompt %}
+<persona>
+{{ persona_prompt }}
+</persona>
+{% endif %}
+
 {% if threat_actor_prompt %}
 {{ threat_actor_prompt }}
 {% endif %}

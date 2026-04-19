@@ -1,0 +1,78 @@
+name: web_app_standard
+description: Standard web application penetration test — recon, auth, injection, logic
+version: 1
+target_types: [web, api]
+
+phases:
+  - name: recon
+    objective: Map attack surface
+    timeout_minutes: 30
+    techniques:
+      - id: T1590
+        description: Passive DNS / subdomain enumeration
+        tools: [subfinder, assetfinder, amass, passive_osint_apis]
+      - id: T1595.001
+        description: Active scanning
+        tools: [nmap, httpx, nuclei]
+      - id: T1593.003
+        description: JS bundle analysis for endpoints and secrets
+        tools: [download_js_bundles, analyze_js_file, fetch_source_map]
+      - id: T1592.002
+        description: API spec discovery
+        tools: [discover_api_spec, discover_graphql_endpoint]
+    deliverables: [engagement_state_hosts, engagement_state_services, api_endpoints]
+
+  - name: auth_analysis
+    objective: Authentication and session management testing
+    timeout_minutes: 45
+    techniques:
+      - id: T1552.001
+        description: Credentials in files (JS bundles, leaked configs)
+        tools: [analyze_js_file, scan_git_history]
+      - id: T1110.001
+        description: Password guessing / default credentials
+        tools: [load_payload_list, fuzz_request_parameter]
+      - id: T1539
+        description: Steal web session cookie
+        tools: [search_burp_proxy_history]
+      - id: T1606
+        description: JWT forgery / algorithm confusion
+        skills: [authentication_jwt]
+    deliverables: [credentials, sessions]
+
+  - name: vulnerability_hunting
+    objective: Run injection and IDOR tests in parallel
+    timeout_minutes: 120
+    parallel: true
+    sub_agents:
+      - name: sqli_agent
+        skills: [sql_injection]
+        payload_list: sql_injection
+      - name: xss_agent
+        skills: [xss]
+        payload_list: xss
+      - name: ssrf_agent
+        skills: [ssrf]
+        payload_list: ssrf
+      - name: idor_agent
+        skills: [idor, broken_function_level_authorization]
+      - name: auth_agent
+        skills: [authentication_jwt, business_logic]
+
+  - name: validation
+    objective: Re-execute PoCs and filter false positives
+    timeout_minutes: 30
+    techniques:
+      - description: Validate every HIGH/CRITICAL finding
+        tools: [list_findings_for_validation, validate_single_finding, record_validation_verdict]
+      - description: Check FP memory for patterns previously dismissed
+        tools: [check_fp_memory]
+
+  - name: reporting
+    objective: Generate professional report with risk scoring
+    timeout_minutes: 15
+    techniques:
+      - description: Score findings with full context
+        tools: [compute_risk_score]
+      - description: Produce final report
+        tools: [finish_scan]

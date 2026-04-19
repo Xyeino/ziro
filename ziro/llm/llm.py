@@ -188,6 +188,7 @@ class LLM:
                 interactive=self.config.interactive,
                 system_prompt_context=self._system_prompt_context,
                 threat_actor_prompt=getattr(self.config, "threat_actor_prompt", None),
+                persona_prompt=getattr(self.config, "persona_prompt", None),
                 skills_catalog=skills_catalog,
                 engagement_state_xml=engagement_state_xml,
                 **skill_content,

@@ -1,0 +1,12 @@
+<tools>
+  <tool name="list_available_playbooks">
+    <description>List all attack playbooks — structured YAML files defining phases/objectives/techniques/sub-agents for specific target types (web, TMA, smart contract, AD, mobile).</description>
+    <parameters></parameters>
+  </tool>
+  <tool name="load_playbook">
+    <description>Load a playbook's full structure for the current agent to follow. Returns XML block with phases, objectives, techniques, and sub-agent definitions for create_agent.</description>
+    <parameters>
+      <parameter name="name" type="string" required="true"><description>Playbook name (e.g., web_app_standard, tma_security).</description></parameter>
+    </parameters>
+  </tool>
+</tools>

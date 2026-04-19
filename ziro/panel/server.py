@@ -2209,6 +2209,28 @@ class SendMessageRequest(BaseModel):
     message: str
 
 
+@app.get("/api/openapi.json", include_in_schema=False)
+async def ziro_openapi_spec() -> dict[str, Any]:
+    """Expose the panel API as OpenAPI 3.1 spec for external integrators.
+
+    FastAPI generates this automatically; we just tag it as a stable public
+    endpoint with custom info. Use with openapi-generator to build typed
+    client libraries for Python/TypeScript/Go/Ruby.
+    """
+    spec = app.openapi()
+    spec["info"] = {
+        "title": "Ziro Panel API",
+        "version": "1.0.0",
+        "description": (
+            "Public HTTP API for the Ziro pentest agent panel. Use these endpoints "
+            "to kick off scans, send messages to running agents, read engagement "
+            "state, and integrate Ziro with CI/CD or custom dashboards."
+        ),
+        "contact": {"url": "https://github.com/Xyeino/ziro"},
+    }
+    return spec
+
+
 @app.get("/api/handoffs")
 async def list_handoffs() -> dict[str, Any]:
     """List pending browser handoff requests for the panel UI modal."""

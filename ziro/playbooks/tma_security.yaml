@@ -1,0 +1,47 @@
+name: tma_security
+description: Telegram Mini App security assessment — initData, bot tokens, SSO, session handling
+version: 1
+target_types: [tma, web]
+
+phases:
+  - name: recon
+    objective: Identify TMA architecture and backend
+    timeout_minutes: 20
+    techniques:
+      - description: Find Mini App registration and backend URL
+        tools: [terminal_execute]
+        skills: [telegram_mini_app]
+      - description: Fetch JS bundle, look for bot tokens
+        tools: [download_js_bundles, analyze_js_file]
+
+  - name: initdata_attack
+    objective: Test initData validation
+    timeout_minutes: 40
+    techniques:
+      - description: Drop initData — see if backend still responds
+        tools: [fuzz_request_parameter]
+      - description: Forge hash / tampered user.id with kept hash
+        skills: [telegram_mini_app]
+      - description: Replay captured initData past auth_date freshness window
+
+  - name: credential_leak_hunt
+    objective: Hunt bot token and service credentials in JS
+    timeout_minutes: 20
+    techniques:
+      - description: Scan all JS chunks for bot token pattern
+        tools: [analyze_js_file]
+      - description: Validate any bot token found via getMe
+        tools: [terminal_execute]
+
+  - name: deep_link_abuse
+    objective: Test start_param injection and deep links
+    timeout_minutes: 20
+    techniques:
+      - description: Fuzz tgWebAppStartParam
+        tools: [fuzz_request_parameter]
+        skills: [telegram_mini_app]
+
+  - name: validation
+    timeout_minutes: 15
+    techniques:
+      - tools: [list_findings_for_validation, validate_single_finding, record_validation_verdict]
