@@ -8,9 +8,11 @@ from .browser import *  # noqa: F403
 from .browser_handoff import *  # noqa: F403
 from .capability_detect import *  # noqa: F403
 from .compliance import *  # noqa: F403
+from .correlation import *  # noqa: F403
 from .engagement_plan import *  # noqa: F403
 from .engagement_state import *  # noqa: F403
 from .evidence import *  # noqa: F403
+from .exploit_chain import *  # noqa: F403
 from .executor import (
     execute_tool,
     execute_tool_invocation,
@@ -56,9 +58,11 @@ from .sarif_import import *  # noqa: F403
 from .sca import *  # noqa: F403
 from .sliver_c2 import *  # noqa: F403
 from .sploitus import *  # noqa: F403
+from .smart_contract import *  # noqa: F403
 from .smart_fuzz import *  # noqa: F403
 from .terminal import *  # noqa: F403
 from .thinking import *  # noqa: F403
+from .timeline import *  # noqa: F403
 from .tmux_interactive import *  # noqa: F403
 from .todo import *  # noqa: F403
 from .tool_doc import *  # noqa: F403

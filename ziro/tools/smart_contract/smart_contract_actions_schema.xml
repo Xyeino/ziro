@@ -1,0 +1,40 @@
+<tools>
+  <tool name="run_slither">
+    <description>Run Slither static analyzer on Solidity file/project. Returns structured findings with detector, impact, confidence, location.</description>
+    <parameters>
+      <parameter name="target_path" type="string" required="true"></parameter>
+      <parameter name="severity_filter" type="string" required="false"><description>high / high,medium / all. Default high,medium.</description></parameter>
+      <parameter name="timeout" type="integer" required="false"></parameter>
+    </parameters>
+  </tool>
+
+  <tool name="run_mythril">
+    <description>Mythril symbolic execution on Solidity contract. Finds reentrancy, int over/underflow, unchecked external calls via constraint solving.</description>
+    <parameters>
+      <parameter name="target_path" type="string" required="true"></parameter>
+      <parameter name="execution_timeout" type="integer" required="false"><description>Default 120s.</description></parameter>
+      <parameter name="max_depth" type="integer" required="false"><description>Default 22.</description></parameter>
+    </parameters>
+  </tool>
+
+  <tool name="run_echidna">
+    <description>Echidna property-based fuzzer for Solidity. Needs contract with echidna_* property functions. Runs test_limit random transactions looking for property violations.</description>
+    <parameters>
+      <parameter name="target_dir" type="string" required="true"></parameter>
+      <parameter name="contract_name" type="string" required="true"></parameter>
+      <parameter name="test_limit" type="integer" required="false"><description>Default 50000.</description></parameter>
+      <parameter name="timeout" type="integer" required="false"><description>Default 600s.</description></parameter>
+    </parameters>
+  </tool>
+
+  <tool name="run_halmos">
+    <description>Halmos symbolic execution on Foundry tests. Finds counter-examples to invariants. Deeper than Echidna fuzzing.</description>
+    <parameters>
+      <parameter name="target_dir" type="string" required="true"></parameter>
+      <parameter name="contract_name" type="string" required="false"></parameter>
+      <parameter name="function_name" type="string" required="false"></parameter>
+      <parameter name="loop_depth" type="integer" required="false"><description>Default 3.</description></parameter>
+      <parameter name="timeout" type="integer" required="false"></parameter>
+    </parameters>
+  </tool>
+</tools>

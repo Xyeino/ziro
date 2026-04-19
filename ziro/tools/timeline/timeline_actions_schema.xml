@@ -1,0 +1,8 @@
+<tools>
+  <tool name="get_session_timeline">
+    <description>Return per-agent activity timeline for Gantt-chart rendering in panel. Pulls tool executions + agent lifecycle events, sorted by timestamp.</description>
+    <parameters>
+      <parameter name="max_events" type="integer" required="false"><description>Default 500.</description></parameter>
+    </parameters>
+  </tool>
+</tools>

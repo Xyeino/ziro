@@ -1,0 +1,31 @@
+<tools>
+  <tool name="correlate_static_dynamic">
+    <description>Promote SAST-imported findings to CONFIRMED when dynamic agents proved them.
+
+Walks UNCONFIRMED findings (imported via import_sarif), matches each against CONFIRMED dynamic findings by vuln_type + endpoint + title. When both agree, boosts confidence and promotes to CONFIRMED. Core of static-dynamic correlation for white-box scans.</description>
+    <parameters>
+      <parameter name="min_confidence_boost" type="number" required="false"><description>Minimum match score to promote. Default 0.3.</description></parameter>
+    </parameters>
+  </tool>
+
+  <tool name="build_target_map">
+    <description>Build Target Map for multi-target scans — correlate source code route handlers with live URLs.
+
+Greps Express/FastAPI/Django/Flask/Spring/Laravel/Rails routes in source files and matches to live URLs. Writes /workspace/target_map.json. White-box agents use this to pivot between static review ('this file implements that endpoint') and dynamic testing.</description>
+    <parameters>
+      <parameter name="code_paths" type="list" required="false"><description>Paths to scan for code. Default /workspace.</description></parameter>
+      <parameter name="live_urls" type="list" required="false"><description>Live URLs from recon to correlate.</description></parameter>
+    </parameters>
+  </tool>
+
+  <tool name="analyze_sca_reachability">
+    <description>Reachability analysis for SCA findings — check if CVE's vulnerable function is actually called from app code.
+
+Given regex patterns matching the vulnerable function (e.g., 'yaml.load\\(' for PyYAML CVE), finds all callers in the codebase and determines whether any caller is reachable from an entry point. Half of SCA findings are unreachable library code — this filters them out.</description>
+    <parameters>
+      <parameter name="repo_path" type="string" required="true"></parameter>
+      <parameter name="vulnerable_function_patterns" type="list" required="true"><description>Regex patterns for the vulnerable function calls (e.g., ['yaml\\.load\\(', 'pickle\\.loads\\(']).</description></parameter>
+      <parameter name="entry_points" type="list" required="false"><description>Custom entry point markers. Defaults cover common patterns.</description></parameter>
+    </parameters>
+  </tool>
+</tools>
