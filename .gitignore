@@ -97,3 +97,16 @@ Thumbs.db
 schema.graphql
 
 .opencode/
+
+# Local workspace directories — do not commit
+/Penligent/
+/competitors/
+/shannon-ref/
+/PentestGPT/
+/Zen-Ai-Pentest/
+/pentagi/
+/pentestagent/
+/shannon/
+/strix/
+ROADMAP_v4.md
+_chat_extract.md
