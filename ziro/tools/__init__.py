@@ -24,6 +24,7 @@ from .finish import *  # noqa: F403
 from .fp_learning import *  # noqa: F403
 from .git_history import *  # noqa: F403
 from .host_header_fuzz import *  # noqa: F403
+from .install_on_demand import *  # noqa: F403
 from .js_analysis import *  # noqa: F403
 from .load_skill import *  # noqa: F403
 from .metasploit import *  # noqa: F403
@@ -44,8 +45,10 @@ from .registry import (
 )
 from .reporting import *  # noqa: F403
 from .risk_scoring import *  # noqa: F403
+from .sarif_import import *  # noqa: F403
 from .sca import *  # noqa: F403
 from .sliver_c2 import *  # noqa: F403
+from .sploitus import *  # noqa: F403
 from .smart_fuzz import *  # noqa: F403
 from .terminal import *  # noqa: F403
 from .thinking import *  # noqa: F403

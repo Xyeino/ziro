@@ -1,0 +1,11 @@
+<tools>
+  <tool name="sploitus_search">
+    <description>Search Sploitus for public exploits by CVE/product/keyword. Aggregates Exploit-DB, GitHub PoCs, Metasploit modules, Packet Storm.
+
+Use after SCA / CVE lookup to find ready-to-adapt weaponized exploits. Do NOT run fetched exploits against out-of-scope targets — RoE enforcement blocks that anyway.</description>
+    <parameters>
+      <parameter name="query" type="string" required="true"><description>CVE ID (CVE-2023-...) / product name / keyword.</description></parameter>
+      <parameter name="max_results" type="integer" required="false"><description>Default 15.</description></parameter>
+    </parameters>
+  </tool>
+</tools>

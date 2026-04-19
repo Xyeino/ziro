@@ -1,0 +1,12 @@
+<tools>
+  <tool name="import_sarif">
+    <description>Parse a SARIF 2.1 file (Semgrep / CodeQL / Bandit / Snyk / Checkmarx) and register findings into engagement state.
+
+Use at scan start for white-box engagements where client provided existing SAST output. Dynamic agents pick up each UNCONFIRMED finding and attempt to exploit it against running app — classic static-dynamic correlation.</description>
+    <parameters>
+      <parameter name="sarif_path" type="string" required="true"><description>Path to .sarif file (abs or /workspace/ relative).</description></parameter>
+      <parameter name="only_severities" type="list" required="false"><description>Filter to specific severities: CRITICAL,HIGH,MEDIUM,LOW,INFO.</description></parameter>
+      <parameter name="max_findings" type="integer" required="false"><description>Default 200.</description></parameter>
+    </parameters>
+  </tool>
+</tools>

@@ -2209,6 +2209,60 @@ class SendMessageRequest(BaseModel):
     message: str
 
 
+@app.post("/api/scan/pause")
+async def pause_scan(body: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Pause all running agents — they finish their current iteration and wait for resume."""
+    from datetime import datetime, timezone
+
+    target_agent_id = (body or {}).get("agent_id", "")
+    paused: list[str] = []
+    for aid, state in _agent_states.items():
+        if target_agent_id and aid != target_agent_id:
+            continue
+        if not state.waiting_for_input and not state.completed:
+            state.waiting_for_input = True
+            state.waiting_start_time = datetime.now(timezone.utc)
+            paused.append(aid)
+            node = _agent_graph.get("nodes", {}).get(aid)
+            if node:
+                node["status"] = "waiting"
+                node["waiting_reason"] = "operator_pause"
+    return {"status": "paused", "agent_ids": paused, "count": len(paused)}
+
+
+@app.post("/api/scan/resume")
+async def resume_scan(body: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Resume paused agents. Optionally pass {message, agent_id} to inject operator guidance."""
+    target_agent_id = (body or {}).get("agent_id", "")
+    message = (body or {}).get("message", "").strip()
+    resumed: list[str] = []
+    for aid, state in _agent_states.items():
+        if target_agent_id and aid != target_agent_id:
+            continue
+        if state.waiting_for_input:
+            if message:
+                state.add_message("user", message)
+            state.resume_from_waiting()
+            resumed.append(aid)
+            node = _agent_graph.get("nodes", {}).get(aid)
+            if node:
+                node["status"] = "running"
+                node.pop("waiting_reason", None)
+    try:
+        tracer = get_global_tracer()
+        if tracer:
+            for aid in resumed:
+                tracer.update_agent_status(aid, "running")
+    except Exception:
+        pass
+    return {
+        "status": "resumed",
+        "agent_ids": resumed,
+        "count": len(resumed),
+        "message_injected": bool(message),
+    }
+
+
 @app.get("/api/openapi.json", include_in_schema=False)
 async def ziro_openapi_spec() -> dict[str, Any]:
     """Expose the panel API as OpenAPI 3.1 spec for external integrators.

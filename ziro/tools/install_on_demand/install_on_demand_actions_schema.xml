@@ -1,0 +1,18 @@
+<tools>
+  <tool name="list_installable_tools">
+    <description>List tools that can be installed on-demand via curated recipes (apt/pipx/go install/gem).</description>
+    <parameters></parameter>
+  </tool>
+
+  <tool name="install_tool_on_demand">
+    <description>Request installation of a known pentest tool into the sandbox.
+
+Uses curated install recipes — the tool name must match an entry in list_installable_tools. Gated by command safety system: apt/pipx installs trigger APPROVAL_REQUIRED unless ZIRO_AUTO_APPROVE_COMMANDS=1.
+
+After install, call detect_capabilities(refresh=True) to refresh the manifest.</description>
+    <parameters>
+      <parameter name="tool_name" type="string" required="true"></parameter>
+      <parameter name="timeout" type="integer" required="false"><description>Install timeout. Default 300s.</description></parameter>
+    </parameters>
+  </tool>
+</tools>

@@ -327,6 +327,26 @@ async def _execute_single_tool(
     if tracer:
         execution_id = tracer.log_tool_execution_start(agent_id, tool_name, args)
 
+    # Dry-run — log planned tool call and skip side-effect tools if ZIRO_DRY_RUN=1.
+    try:
+        from ziro.dryrun import is_dry_run, log_planned_tool_call, should_skip_execution
+
+        if is_dry_run():
+            log_planned_tool_call(tool_name, args)
+            if should_skip_execution(tool_name):
+                observation_xml = (
+                    f"<tool_result>\n<tool_name>{tool_name}</tool_name>\n"
+                    f"<dry_run>Skipped under ZIRO_DRY_RUN=1. Call logged to "
+                    f"/workspace/.ziro-dryrun.jsonl.</dry_run>\n</tool_result>"
+                )
+                _update_tracer_with_result(
+                    tracer, execution_id, False,
+                    {"dry_run": True, "tool": tool_name}, None,
+                )
+                return observation_xml, [], False
+    except Exception:  # noqa: BLE001
+        pass
+
     # Scope enforcement — if RoE is loaded and ZIRO_SCOPE_ENFORCE=1, block any
     # tool invocation whose extracted targets are out of scope. This prevents
     # the agent from accidentally hitting third-party hosts.
