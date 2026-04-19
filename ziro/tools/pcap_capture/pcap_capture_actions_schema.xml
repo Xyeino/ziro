@@ -1,0 +1,22 @@
+<tools>
+  <tool name="start_pcap_capture">
+    <description>Start tcpdump capture in background. Returns capture_id to stop/read later. Writes to /workspace/pcap/&lt;id&gt;.pcap. Auto-stops at max_packets or max_seconds.</description>
+    <parameters>
+      <parameter name="interface" type="string" required="false"><description>any / eth0 / lo / docker0. Default: any.</description></parameter>
+      <parameter name="filter_expr" type="string" required="false"><description>BPF filter (e.g., 'host 10.0.0.5 and port 443').</description></parameter>
+      <parameter name="max_packets" type="integer" required="false"><description>Default 5000.</description></parameter>
+      <parameter name="max_seconds" type="integer" required="false"><description>Default 300.</description></parameter>
+      <parameter name="name" type="string" required="false"><description>Optional capture name.</description></parameter>
+    </parameters>
+  </tool>
+  <tool name="stop_pcap_capture">
+    <description>Stop a running tcpdump capture and return file stats.</description>
+    <parameters>
+      <parameter name="capture_id" type="string" required="true"></parameter>
+    </parameters>
+  </tool>
+  <tool name="list_pcap_captures">
+    <description>List active + on-disk pcap captures.</description>
+    <parameters></parameters>
+  </tool>
+</tools>

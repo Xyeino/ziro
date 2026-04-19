@@ -373,10 +373,39 @@ async def _execute_single_tool(
         # Scope enforcement failure is non-fatal — fall through and execute
         pass
 
+    # Tool result cache — for deterministic tools, skip re-execution if cached.
+    try:
+        from ziro.tools.result_cache import cache_lookup, cache_store, is_cacheable
+
+        cached = cache_lookup(tool_name, args) if is_cacheable(tool_name) else None
+    except Exception:  # noqa: BLE001
+        cached = None
+        cache_store = None  # type: ignore[assignment]
+
+    if cached is not None:
+        result = cached
+        is_error = False
+        error_payload = None
+        _update_tracer_with_result(tracer, execution_id, False, result, None)
+        observation_xml, images = _format_tool_result(tool_name, result)
+        # Add a marker noting this was from cache
+        observation_xml = observation_xml.replace(
+            "<tool_result>",
+            "<tool_result cache=\"hit\">",
+        )
+        return observation_xml, images, False
+
     try:
         result = await execute_tool_invocation(tool_inv, agent_state)
 
         is_error, error_payload = _check_error_result(result)
+
+        # Populate cache for successful deterministic calls
+        try:
+            if not is_error and cache_store is not None:
+                cache_store(tool_name, args, result)
+        except Exception:  # noqa: BLE001
+            pass
 
         # Track consecutive tool failures per agent so a stuck agent gets
         # terminated after ZIRO_TOOL_FAILURE_BUDGET (default 15) in a row

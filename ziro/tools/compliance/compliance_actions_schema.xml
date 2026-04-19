@@ -1,0 +1,14 @@
+<tools>
+  <tool name="map_to_compliance">
+    <description>Map a vulnerability to OWASP Top 10 2021 / CWE / MITRE ATT&amp;CK / PCI-DSS / SOC2 / HIPAA / GDPR tags.
+
+Pass cwe (canonical like 'CWE-89') OR vuln_type (free-form keyword: sqli, xss, ssrf, idor, jwt, rce, etc). Call before create_vulnerability_report to attach full compliance metadata.
+
+Returns owasp_top10_2021 category, MITRE technique IDs, compliance_tags (PCI-DSS-6.5.1, HIPAA-164.308(a)(4), SOC2-CC6.1, GDPR-Art.32, ...).</description>
+    <parameters>
+      <parameter name="vuln_type" type="string" required="false"><description>Freeform keyword like 'sqli', 'xss', 'ssrf', 'jwt', 'idor'.</description></parameter>
+      <parameter name="cwe" type="string" required="false"><description>Canonical CWE ID like 'CWE-89'.</description></parameter>
+      <parameter name="cvss_score" type="number" required="false"><description>Optional CVSS for severity auto-tier.</description></parameter>
+    </parameters>
+  </tool>
+</tools>

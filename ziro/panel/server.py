@@ -2209,6 +2209,136 @@ class SendMessageRequest(BaseModel):
     message: str
 
 
+@app.get("/api/approvals")
+async def list_approvals_endpoint() -> dict[str, Any]:
+    """List pending operator approval requests for panel UI."""
+    import json as _json
+    import os as _os
+
+    approval_dir = "/workspace/.ziro-approvals"
+    if not _os.path.isdir(approval_dir):
+        return {"pending": [], "count": 0}
+    pending = []
+    for fname in sorted(_os.listdir(approval_dir)):
+        if not fname.endswith(".json"):
+            continue
+        try:
+            with open(_os.path.join(approval_dir, fname), encoding="utf-8") as f:
+                st = _json.load(f)
+            if st.get("status") == "pending":
+                pending.append(st)
+        except Exception:
+            continue
+    return {"pending": pending, "count": len(pending)}
+
+
+@app.post("/api/approval-decide/{approval_id}")
+async def decide_approval(approval_id: str, body: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Operator approves/denies a pending request."""
+    import json as _json
+    import os as _os
+    import time as _time
+
+    path = f"/workspace/.ziro-approvals/{approval_id}.json"
+    if not _os.path.isfile(path):
+        raise HTTPException(status_code=404, detail="Approval request not found")
+    try:
+        with open(path, encoding="utf-8") as f:
+            state = _json.load(f)
+    except Exception:
+        raise HTTPException(status_code=500, detail="Corrupt approval state")
+
+    approved = bool((body or {}).get("approved", False))
+    reason = (body or {}).get("reason", "")[:500]
+    decided_by = (body or {}).get("decided_by", "operator")[:100]
+
+    state["status"] = "approved" if approved else "denied"
+    state["approved"] = approved
+    state["operator_reason"] = reason
+    state["decided_by"] = decided_by
+    state["decided_at"] = _time.time()
+
+    with open(path, "w", encoding="utf-8") as f:
+        _json.dump(state, f, indent=2)
+
+    return {"status": state["status"], "approval_id": approval_id}
+
+
+@app.get("/api/llm-debug/{agent_id}")
+async def get_llm_debug(agent_id: str) -> dict[str, Any]:
+    """Inspect last N messages an agent has seen — debug why it made a decision."""
+    state = _agent_states.get(agent_id)
+    if not state:
+        raise HTTPException(status_code=404, detail="Agent not found")
+
+    messages = state.messages[-30:]
+    return {
+        "agent_id": agent_id,
+        "agent_name": getattr(state, "agent_name", ""),
+        "iteration": state.iteration,
+        "waiting": state.waiting_for_input,
+        "completed": state.completed,
+        "llm_failed": getattr(state, "llm_failed", False),
+        "consecutive_llm_failures": getattr(state, "consecutive_llm_failures", 0),
+        "messages_preview": [
+            {
+                "role": m.get("role", "?"),
+                "content_preview": (
+                    m.get("content", "")
+                    if isinstance(m.get("content"), str)
+                    else str(m.get("content"))[:500]
+                )[:2000],
+                "has_thinking": bool(m.get("thinking_blocks")),
+            }
+            for m in messages
+        ],
+    }
+
+
+@app.get("/api/cost-breakdown")
+async def get_cost_breakdown() -> dict[str, Any]:
+    """Per-agent LLM cost + token totals for live cost tracker in panel header."""
+    rows = []
+    totals = {"input_tokens": 0, "output_tokens": 0, "cached_tokens": 0, "cost": 0.0}
+    for agent_id, state in _agent_states.items():
+        node = _agent_graph.get("nodes", {}).get(agent_id, {})
+        llm_stats = getattr(state, "_llm_stats", None)
+        # Fall back: try to pull from agent_instance.llm.total_stats
+        if llm_stats is None:
+            try:
+                from ziro.tools.agents_graph.agents_graph_actions import _agent_instances
+
+                inst = _agent_instances.get(agent_id)
+                if inst and hasattr(inst, "llm") and hasattr(inst.llm, "_total_stats"):
+                    s = inst.llm._total_stats
+                    llm_stats = {
+                        "input_tokens": getattr(s, "input_tokens", 0),
+                        "output_tokens": getattr(s, "output_tokens", 0),
+                        "cached_tokens": getattr(s, "cached_tokens", 0),
+                        "cost": getattr(s, "cost", 0.0),
+                    }
+            except Exception:
+                llm_stats = {}
+        if not llm_stats:
+            continue
+        rows.append(
+            {
+                "agent_id": agent_id,
+                "agent_name": node.get("name", ""),
+                "status": node.get("status", ""),
+                **llm_stats,
+            }
+        )
+        for k in ("input_tokens", "output_tokens", "cached_tokens"):
+            totals[k] += int(llm_stats.get(k, 0) or 0)
+        totals["cost"] += float(llm_stats.get("cost", 0.0) or 0.0)
+
+    return {
+        "totals": totals,
+        "by_agent": sorted(rows, key=lambda r: -float(r.get("cost", 0))),
+    }
+
+
 @app.post("/api/scan/pause")
 async def pause_scan(body: dict[str, Any] | None = None) -> dict[str, Any]:
     """Pause all running agents — they finish their current iteration and wait for resume."""

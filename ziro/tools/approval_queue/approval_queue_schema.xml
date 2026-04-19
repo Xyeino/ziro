@@ -1,0 +1,19 @@
+<tools>
+  <tool name="request_operator_approval">
+    <description>Request operator approval for a sensitive action. Blocks until decided or timeout.
+
+Higher-level than command_safety — this is for agent-initiated 'should I do X?' moments (deploy implant, delete persistence, submit finding to bug bounty platform, pivot to internal subnet). Operator sees request in panel, approves/denies. Returns the decision.</description>
+    <parameters>
+      <parameter name="action" type="string" required="true"><description>Short label (deploy_implant, delete_persistence, ...).</description></parameter>
+      <parameter name="rationale" type="string" required="true"><description>Why you want to do this.</description></parameter>
+      <parameter name="risk_level" type="string" required="false"><description>low / medium / high / critical. Default medium.</description></parameter>
+      <parameter name="details" type="dict" required="false"><description>Additional context (target host, payload preview, etc.).</description></parameter>
+      <parameter name="timeout_seconds" type="integer" required="false"><description>Default 600 (10 min). On timeout = deny.</description></parameter>
+    </parameters>
+  </tool>
+
+  <tool name="list_pending_approvals">
+    <description>List pending operator approval requests (panel UI).</description>
+    <parameters></parameters>
+  </tool>
+</tools>

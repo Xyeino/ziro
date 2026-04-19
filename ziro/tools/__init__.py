@@ -1,11 +1,13 @@
 from .agents_graph import *  # noqa: F403
 from .api_discovery import *  # noqa: F403
 from .api_spec import *  # noqa: F403
+from .approval_queue import *  # noqa: F403
 from .attack_graph import *  # noqa: F403
 from .batch_http import *  # noqa: F403
 from .browser import *  # noqa: F403
 from .browser_handoff import *  # noqa: F403
 from .capability_detect import *  # noqa: F403
+from .compliance import *  # noqa: F403
 from .engagement_plan import *  # noqa: F403
 from .engagement_state import *  # noqa: F403
 from .evidence import *  # noqa: F403
@@ -31,6 +33,7 @@ from .metasploit import *  # noqa: F403
 from .notes import *  # noqa: F403
 from .payload_encoder import *  # noqa: F403
 from .payload_lib import *  # noqa: F403
+from .pcap_capture import *  # noqa: F403
 from .playbook import *  # noqa: F403
 from .proxy import *  # noqa: F403
 from .python import *  # noqa: F403
