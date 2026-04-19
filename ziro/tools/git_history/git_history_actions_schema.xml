@@ -1,0 +1,12 @@
+<tools>
+  <tool name="scan_git_history">
+    <description>Scan a git repo's full commit history for secrets via gitleaks.
+
+Walks every commit in every branch + reflog. Catches secrets that were added then removed — common mistake that regular working-tree scans miss. Requires gitleaks installed in the sandbox.</description>
+    <parameters>
+      <parameter name="repo_path" type="string" required="true"><description>Absolute or workspace-relative path to repo root.</description></parameter>
+      <parameter name="max_findings" type="integer" required="false"><description>Cap on returned findings. Default 100.</description></parameter>
+      <parameter name="timeout" type="integer" required="false"><description>Gitleaks timeout in seconds. Default 300.</description></parameter>
+    </parameters>
+  </tool>
+</tools>

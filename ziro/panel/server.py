@@ -2209,6 +2209,65 @@ class SendMessageRequest(BaseModel):
     message: str
 
 
+@app.get("/api/handoffs")
+async def list_handoffs() -> dict[str, Any]:
+    """List pending browser handoff requests for the panel UI modal."""
+    import json as _json
+    import os as _os
+
+    handoff_dir = "/workspace/.ziro-handoffs"
+    if not _os.path.isdir(handoff_dir):
+        return {"pending": [], "count": 0}
+
+    pending = []
+    for fname in sorted(_os.listdir(handoff_dir)):
+        if not fname.endswith(".json"):
+            continue
+        try:
+            with open(_os.path.join(handoff_dir, fname), encoding="utf-8") as f:
+                state = _json.load(f)
+            if state.get("status") == "pending":
+                pending.append(state)
+        except Exception:
+            continue
+
+    return {"pending": pending, "count": len(pending)}
+
+
+@app.post("/api/handoff-complete/{handoff_id}")
+async def complete_handoff(handoff_id: str, body: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Operator marks a handoff completed — agent unblocks on next poll."""
+    import json as _json
+    import os as _os
+    import time as _time
+
+    handoff_dir = "/workspace/.ziro-handoffs"
+    path = _os.path.join(handoff_dir, f"{handoff_id}.json")
+    if not _os.path.isfile(path):
+        raise HTTPException(status_code=404, detail="Handoff not found")
+
+    try:
+        with open(path, encoding="utf-8") as f:
+            state = _json.load(f)
+    except Exception:
+        raise HTTPException(status_code=500, detail="Corrupt handoff state")
+
+    action = (body or {}).get("action", "complete")
+    notes = (body or {}).get("notes", "")[:500]
+
+    if action == "cancel":
+        state["status"] = "cancelled"
+    else:
+        state["status"] = "completed"
+    state["completed_at"] = _time.time()
+    state["operator_notes"] = notes
+
+    with open(path, "w", encoding="utf-8") as f:
+        _json.dump(state, f, indent=2)
+
+    return {"status": state["status"], "handoff_id": handoff_id}
+
+
 @app.post("/api/agent-message")
 async def send_agent_message(req: SendMessageRequest) -> dict[str, Any]:
     """Send a user message to an agent (default: root agent)."""

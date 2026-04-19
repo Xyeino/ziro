@@ -1,0 +1,28 @@
+<tools>
+  <tool name="request_auth_handoff">
+    <description>Pause agent and request operator to manually authenticate in the sandbox browser.
+
+When the agent hits a login form it can't automate (2FA, SSO, CAPTCHA, WebAuthn, magic link), call this tool. A modal pops up in the panel showing a live browser view; operator types their credentials directly in the browser; Caido proxy captures the resulting session token; agent resumes with authenticated context.
+
+Credentials NEVER flow through the LLM — the agent only sees that auth succeeded and fetches the session token from proxy history after unblock.
+
+Typical flow:
+1. request_auth_handoff(url="https://target.com/login", reason="Testing horizontal IDOR requires authenticated session")
+2. (blocks for up to 10 min waiting for operator)
+3. On success, call search_burp_proxy_history(host="target.com", status_min=200, status_max=299) to find the auth response
+4. Call record_credential(source="browser_handoff", token="<jwt/cookie>", token_type="...", validated=true)
+5. Proceed with authenticated testing</description>
+    <parameters>
+      <parameter name="url" type="string" required="true"><description>The login URL the operator should navigate to (or already be at).</description></parameter>
+      <parameter name="reason" type="string" required="true"><description>Why you need auth — shown to operator so they understand the context.</description></parameter>
+      <parameter name="expected_session_type" type="string" required="false"><description>http_cookie / bearer / jwt / oauth — helps panel UI show proper extraction hints.</description></parameter>
+      <parameter name="timeout_seconds" type="integer" required="false"><description>How long to wait for operator. Default 600 (10 min).</description></parameter>
+      <parameter name="poll_interval" type="number" required="false"><description>How often to check for completion. Default 2.0s.</description></parameter>
+    </parameters>
+  </tool>
+
+  <tool name="list_pending_handoffs">
+    <description>List all currently pending handoff requests. Used by panel UI.</description>
+    <parameters></parameters>
+  </tool>
+</tools>

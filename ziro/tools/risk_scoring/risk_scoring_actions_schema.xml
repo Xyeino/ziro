@@ -1,0 +1,27 @@
+<tools>
+  <tool name="compute_risk_score">
+    <description>Compute enriched risk score for a finding going beyond raw CVSS.
+
+Returns score 0-100, risk tier (CRITICAL/HIGH/MEDIUM/LOW/INFO), remediation priority (P0-P4), and factor breakdown showing how each input contributed.
+
+Call this for every finding before create_vulnerability_report — clients need 'fix this FIRST' ordering that CVSS alone can't provide.
+
+Factors:
+- cvss_score base (0-10 scaled to 0-35 points)
+- reachability: unauthenticated (+25) / authenticated (+12) / internal (+5) / unreachable (-10)
+- data_sensitivity: credentials (+18) / phi (+15) / payment (+15) / trade_secret (+12) / pii (+10) / none (0)
+- blast_radius: infra (+22) / all_tenants (+18) / single_tenant (+5) / single_user (0)
+- business_criticality: critical (+10) / high (+6) / medium (+3) / low (0)
+- exploit_maturity: in_the_wild (+15) / weaponized (+8) / working_poc (0) / poc_theoretical (-5)
+- compliance_flags: +4 per flag (PCI, HIPAA, SOC2, GDPR)</description>
+    <parameters>
+      <parameter name="cvss_score" type="number" required="true"><description>Raw CVSS v3 score 0-10.</description></parameter>
+      <parameter name="reachability" type="string" required="false"><description>unauthenticated / authenticated / internal / unreachable</description></parameter>
+      <parameter name="data_sensitivity" type="string" required="false"><description>none / pii / phi / payment / trade_secret / credentials</description></parameter>
+      <parameter name="blast_radius" type="string" required="false"><description>single_user / single_tenant / all_tenants / infra</description></parameter>
+      <parameter name="business_criticality" type="string" required="false"><description>low / medium / high / critical</description></parameter>
+      <parameter name="compliance_flags" type="list" required="false"><description>List like ['PCI-DSS', 'HIPAA', 'SOC2', 'GDPR'].</description></parameter>
+      <parameter name="exploit_maturity" type="string" required="false"><description>poc_theoretical / working_poc / weaponized / in_the_wild</description></parameter>
+    </parameters>
+  </tool>
+</tools>

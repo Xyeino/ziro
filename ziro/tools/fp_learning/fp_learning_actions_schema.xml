@@ -1,0 +1,25 @@
+<tools>
+  <tool name="mark_as_false_positive">
+    <description>Persist a false-positive marker so future scans can recognize the pattern.
+
+Called by the operator via panel UI when a finding is incorrect. Stores the fingerprint (vuln_type + normalized endpoint) in ~/.ziro/fp_memory.jsonl. Future scans check this memory and auto-downgrade matching findings.</description>
+    <parameters>
+      <parameter name="finding_id" type="string" required="true"></parameter>
+      <parameter name="title" type="string" required="true"></parameter>
+      <parameter name="vuln_type" type="string" required="true"></parameter>
+      <parameter name="endpoint" type="string" required="false"></parameter>
+      <parameter name="reason" type="string" required="false"><description>Why it's an FP — helps future investigation.</description></parameter>
+      <parameter name="target" type="string" required="false"></parameter>
+    </parameters>
+  </tool>
+
+  <tool name="check_fp_memory">
+    <description>Check if a candidate finding was previously marked FP. Call BEFORE create_vulnerability_report to decide whether to suppress or proceed with a note.</description>
+    <parameters>
+      <parameter name="title" type="string" required="true"></parameter>
+      <parameter name="vuln_type" type="string" required="false"></parameter>
+      <parameter name="endpoint" type="string" required="false"></parameter>
+      <parameter name="target" type="string" required="false"></parameter>
+    </parameters>
+  </tool>
+</tools>

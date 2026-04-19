@@ -1,0 +1,16 @@
+<tools>
+  <tool name="fuzz_host_headers">
+    <description>Fuzz Host: header against target IP to discover hidden virtual hosts.
+
+Same IP often serves multiple internal sites routed by Host header. Sends ~75 candidate Host values (admin, internal, staging, dev, vpn, panel, api-internal, jenkins, grafana, ...) and flags responses differing from baseline (status/size/body hash delta).
+
+Useful finding: target.com and 1.2.3.4 give normal app, but Host: admin.internal.target.com gives admin panel — pure virtual-host discovery.</description>
+    <parameters>
+      <parameter name="target_ip_or_url" type="string" required="true"><description>IP or URL of target.</description></parameter>
+      <parameter name="custom_wordlist" type="list" required="false"><description>Override the built-in 75-name wordlist.</description></parameter>
+      <parameter name="base_domain" type="string" required="false"><description>Suffix for host values (e.g. 'example.com' tries 'admin.example.com').</description></parameter>
+      <parameter name="user_agent" type="string" required="false"></parameter>
+      <parameter name="timeout" type="number" required="false"></parameter>
+    </parameters>
+  </tool>
+</tools>

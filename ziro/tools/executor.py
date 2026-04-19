@@ -358,6 +358,38 @@ async def _execute_single_tool(
 
         is_error, error_payload = _check_error_result(result)
 
+        # Track consecutive tool failures per agent so a stuck agent gets
+        # terminated after ZIRO_TOOL_FAILURE_BUDGET (default 15) in a row
+        # instead of burning the full max_iterations on a broken tool loop.
+        try:
+            from ziro.tools.retry_budget import (
+                is_budget_exhausted,
+                record_failure,
+                record_success,
+            )
+
+            if is_error:
+                record_failure(
+                    agent_id,
+                    reason=str(error_payload)[:200] if error_payload else "tool error",
+                )
+                exhausted, state = is_budget_exhausted(agent_id)
+                if exhausted and agent_state and hasattr(agent_state, "request_stop"):
+                    import logging
+
+                    logging.getLogger(__name__).error(
+                        "Agent %s exceeded tool failure budget "
+                        "(%d consecutive failures); requesting stop. Last: %s",
+                        agent_id,
+                        state.consecutive_failures if state else 0,
+                        state.last_failure_reason if state else "",
+                    )
+                    agent_state.request_stop()
+            else:
+                record_success(agent_id)
+        except Exception:  # noqa: BLE001
+            pass
+
         if (
             tool_name in ("finish_scan", "agent_finish")
             and not is_error

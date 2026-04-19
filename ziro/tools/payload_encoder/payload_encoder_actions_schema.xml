@@ -1,0 +1,21 @@
+<tools>
+  <tool name="encode_payload">
+    <description>Run a payload through a chain of encoders for WAF bypass.
+
+Available encoders: url, url_double, url_all, base64, base64_url, hex, unicode, html_entities, html_entities_hex, html_escape, case_swap, sql_comment_split, js_string.
+
+Pipelines are applied in order — output of one feeds into the next.</description>
+    <parameters>
+      <parameter name="payload" type="string" required="true"><description>Raw payload to encode.</description></parameter>
+      <parameter name="pipeline" type="list" required="true"><description>Ordered list of encoder names, e.g. ["url", "url"] for double URL encoding.</description></parameter>
+    </parameters>
+  </tool>
+
+  <tool name="suggest_encoding_for_waf">
+    <description>Return 5-10 encoding pipelines known to bypass specific WAF/context combos. Call encode_payload with each suggested pipeline to get the ready-to-send variants.</description>
+    <parameters>
+      <parameter name="waf_vendor" type="string" required="false"><description>cloudflare / akamai / aws_waf / imperva / sucuri / modsecurity / generic</description></parameter>
+      <parameter name="target_context" type="string" required="false"><description>sqli / xss / command_injection / path_traversal / xxe</description></parameter>
+    </parameters>
+  </tool>
+</tools>

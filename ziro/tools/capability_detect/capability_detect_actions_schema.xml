@@ -1,0 +1,12 @@
+<tools>
+  <tool name="detect_capabilities">
+    <description>Probe the sandbox for installed pentest tooling and return the manifest.
+
+Checks ~60 common tools (nmap, sqlmap, msfconsole, hashcat, trufflehog, sliver-client, slither, trivy, nuclei, ffuf, arjun, gitleaks, semgrep, commix, dalfox, wpscan, etc.) and returns what's actually installed with versions.
+
+Result is cached per-process. Call once at scan start, then reference manifest before using tools. Tools listed in `missing` are NOT available — don't try to call them.</description>
+    <parameters>
+      <parameter name="refresh" type="boolean" required="false"><description>Re-probe even if cached.</description></parameter>
+    </parameters>
+  </tool>
+</tools>
