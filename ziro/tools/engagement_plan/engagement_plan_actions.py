@@ -48,7 +48,7 @@ def _read(path: str) -> str | None:
         return f.read()
 
 
-@register_tool(sandbox_execution=True)
+@register_tool(sandbox_execution=True, agent_roles=["root"])
 def create_roe(
     agent_state: Any,
     engagement_name: str,
@@ -177,7 +177,7 @@ def create_roe(
         }
 
 
-@register_tool(sandbox_execution=True)
+@register_tool(sandbox_execution=True, agent_roles=["root"])
 def create_conops(
     agent_state: Any,
     engagement_name: str,
@@ -240,7 +240,7 @@ See the [Rules of Engagement](./roe.md) for the authoritative scope and prohibit
         return {"success": True, "path": path, "engagement_slug": slug}
 
 
-@register_tool(sandbox_execution=True)
+@register_tool(sandbox_execution=True, agent_roles=["root"])
 def create_opplan(
     agent_state: Any,
     engagement_name: str,
@@ -345,7 +345,7 @@ def create_opplan(
         }
 
 
-@register_tool(sandbox_execution=True)
+@register_tool(sandbox_execution=True, agent_roles=["root"])
 def create_deconfliction_plan(
     agent_state: Any,
     engagement_name: str,
@@ -415,7 +415,7 @@ When any pause condition triggers, the root agent MUST:
         return {"success": True, "path": path, "engagement_slug": slug}
 
 
-@register_tool(sandbox_execution=True)
+@register_tool(sandbox_execution=True, agent_roles=["root"])
 def get_engagement_package(agent_state: Any, engagement_slug: str) -> dict[str, Any]:
     """Read the full engagement package back into the agent's context.
 

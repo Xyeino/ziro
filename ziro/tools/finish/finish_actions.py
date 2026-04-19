@@ -86,7 +86,7 @@ def _check_active_agents(agent_state: Any = None) -> dict[str, Any] | None:
     return None
 
 
-@register_tool(sandbox_execution=False)
+@register_tool(sandbox_execution=False, agent_roles=["root"])
 def finish_scan(
     executive_summary: str,
     methodology: str,

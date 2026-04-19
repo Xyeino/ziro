@@ -208,7 +208,7 @@ def view_agent_graph(agent_state: Any) -> dict[str, Any]:
         }
 
 
-@register_tool(sandbox_execution=False)
+@register_tool(sandbox_execution=False, agent_roles=["root"])
 def create_agent(
     agent_state: Any,
     task: str,

@@ -155,8 +155,22 @@ class LLM:
             except Exception:  # noqa: BLE001
                 skills_catalog = None
 
+            # Pre-filter tools prompt by scan mode and agent role so the
+            # per-call system prompt only contains tools this agent can/should
+            # use. Root-only tools (create_agent, finish_scan, create_roe etc)
+            # are dropped for sub-agents; C2/msf tools are dropped for quick
+            # mode. Saves 15-30% tokens on sub-agents and quick scans.
+            scan_mode = getattr(self.config, "scan_mode", None)
+            # The only indication we have of root vs sub-agent at this layer
+            # is the agent_name used for prompt template selection. "ZiroAgent"
+            # is the root; everything else is a sub-agent.
+            agent_role = "root" if self.agent_name == "ZiroAgent" else "subagent"
+
+            def _filtered_tools_prompt() -> str:
+                return get_tools_prompt(scan_mode=scan_mode, agent_role=agent_role)
+
             result = env.get_template("system_prompt.jinja").render(
-                get_tools_prompt=get_tools_prompt,
+                get_tools_prompt=_filtered_tools_prompt,
                 loaded_skill_names=list(skill_content.keys()),
                 interactive=self.config.interactive,
                 system_prompt_context=self._system_prompt_context,

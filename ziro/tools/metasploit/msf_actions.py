@@ -74,7 +74,7 @@ def _build_rc_script(
     return "\n".join(lines)
 
 
-@register_tool(sandbox_execution=True)
+@register_tool(sandbox_execution=True, scan_modes=["deep", "standard"])
 def msf_search(
     query: str,
     module_type: str | None = None,
@@ -117,7 +117,7 @@ def msf_search(
     }
 
 
-@register_tool(sandbox_execution=True)
+@register_tool(sandbox_execution=True, scan_modes=["deep", "standard"])
 def msf_module_info(
     module_path: str,
 ) -> dict[str, Any]:
@@ -152,7 +152,7 @@ def msf_module_info(
     }
 
 
-@register_tool(sandbox_execution=True)
+@register_tool(sandbox_execution=True, scan_modes=["deep", "standard"])
 def msf_execute(
     module_path: str,
     options: str,

@@ -55,7 +55,7 @@ def _ensure_session(agent_state: Any) -> dict[str, Any]:
     return result
 
 
-@register_tool(sandbox_execution=True)
+@register_tool(sandbox_execution=True, scan_modes=["deep", "standard"])
 def sliver_connect(agent_state: Any) -> dict[str, Any]:
     """Establish the sliver-client persistent session inside the sandbox.
 
@@ -69,7 +69,7 @@ def sliver_connect(agent_state: Any) -> dict[str, Any]:
     return _ensure_session(agent_state)
 
 
-@register_tool(sandbox_execution=True)
+@register_tool(sandbox_execution=True, scan_modes=["deep", "standard"])
 def sliver_command(agent_state: Any, command: str, wait_seconds: float = 10.0) -> dict[str, Any]:
     """Send a raw command to the sliver console (e.g., `sessions`, `jobs`, `help`).
 
@@ -96,7 +96,7 @@ def sliver_command(agent_state: Any, command: str, wait_seconds: float = 10.0) -
     )
 
 
-@register_tool(sandbox_execution=True)
+@register_tool(sandbox_execution=True, scan_modes=["deep", "standard"])
 def generate_implant(
     agent_state: Any,
     name: str,
@@ -186,7 +186,7 @@ def generate_implant(
     }
 
 
-@register_tool(sandbox_execution=True)
+@register_tool(sandbox_execution=True, scan_modes=["deep", "standard"])
 def start_listener(
     agent_state: Any,
     protocol: Literal["mtls", "https", "http", "dns", "wg"],
@@ -236,7 +236,7 @@ def start_listener(
     return result
 
 
-@register_tool(sandbox_execution=True)
+@register_tool(sandbox_execution=True, scan_modes=["deep", "standard"])
 def list_sessions_and_beacons(agent_state: Any) -> dict[str, Any]:
     """List all active sliver sessions, beacons, and jobs in one call.
 
@@ -265,7 +265,7 @@ def list_sessions_and_beacons(agent_state: Any) -> dict[str, Any]:
     return {"success": True, "outputs": outputs}
 
 
-@register_tool(sandbox_execution=True)
+@register_tool(sandbox_execution=True, scan_modes=["deep", "standard"])
 def interact_with_session(
     agent_state: Any, session_id: str, command: str, wait_seconds: float = 30.0
 ) -> dict[str, Any]:

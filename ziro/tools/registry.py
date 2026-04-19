@@ -194,7 +194,17 @@ def register_tool(
     sandbox_execution: bool = True,
     requires_browser_mode: bool = False,
     requires_web_search_mode: bool = False,
+    scan_modes: list[str] | None = None,
+    agent_roles: list[str] | None = None,
 ) -> Callable[..., Any]:
+    """Register a tool, optionally restricting it to specific scan modes or agent roles.
+
+    scan_modes:  list of scan_mode names this tool applies to (e.g., ['deep', 'standard']).
+                 If empty/None, tool is available in all scan modes.
+    agent_roles: list of agent role names (e.g., ['root'] for root-only tools like
+                 create_agent / finish_scan / create_roe). Empty/None = any agent.
+    """
+
     def decorator(f: Callable[..., Any]) -> Callable[..., Any]:
         if not _should_register_tool(
             sandbox_execution=sandbox_execution,
@@ -209,6 +219,8 @@ def register_tool(
             "function": f,
             "module": _get_module_name(f),
             "sandbox_execution": sandbox_execution,
+            "scan_modes": list(scan_modes) if scan_modes else [],
+            "agent_roles": list(agent_roles) if agent_roles else [],
         }
 
         if not sandbox_mode:
@@ -300,13 +312,50 @@ def _compact_tool_xml(xml: str) -> str:
     return xml
 
 
-def get_tools_prompt(compact: bool | None = None) -> str:
+def _tool_passes_filter(
+    tool: dict[str, Any],
+    scan_mode: str | None,
+    agent_role: str | None,
+) -> bool:
+    """Check whether a tool should be included for the given scan mode and agent role.
+
+    Semantics:
+    - If tool declares no scan_modes restriction → available in all modes.
+    - If tool declares scan_modes and caller passes scan_mode → must match, else hide.
+    - If tool declares agent_roles (e.g., ['root']) → tool is ONLY visible when
+      caller passes a matching agent_role. Sub-agents (role='subagent' or similar)
+      do not see root-only tools; root (role='root') does.
+    """
+    tool_modes = tool.get("scan_modes") or []
+    if tool_modes and scan_mode and scan_mode not in tool_modes:
+        return False
+
+    tool_roles = tool.get("agent_roles") or []
+    if tool_roles:
+        # Restricted tool — require explicit role match
+        if not agent_role or agent_role not in tool_roles:
+            return False
+
+    return True
+
+
+def get_tools_prompt(
+    compact: bool | None = None,
+    scan_mode: str | None = None,
+    agent_role: str | None = None,
+) -> str:
     """Render the registered-tools XML block for the system prompt.
 
     By default the prompt is compact: <examples> and <details> blocks are
     stripped from each tool schema. Set ZIRO_VERBOSE_TOOLS=1 in the env (or
     pass compact=False) to keep the full schemas. Compact mode saves ~14K
     input tokens per LLM call and is the recommended production setting.
+
+    scan_mode and agent_role (when provided) filter the tool set:
+    - quick mode drops heavy C2/exploit tools (sliver, msf, implant generators)
+    - sub-agents drop root-only tools (create_agent, finish_scan, create_roe,
+      create_conops, create_opplan, create_deconfliction_plan, get_engagement_package)
+    Saves ~15-30% additional tokens depending on mode/role.
     """
     if compact is None:
         compact = os.getenv("ZIRO_VERBOSE_TOOLS", "").strip().lower() not in (
@@ -318,6 +367,8 @@ def get_tools_prompt(compact: bool | None = None) -> str:
 
     tools_by_module: dict[str, list[dict[str, Any]]] = {}
     for tool in tools:
+        if not _tool_passes_filter(tool, scan_mode, agent_role):
+            continue
         module = tool.get("module", "unknown")
         if module not in tools_by_module:
             tools_by_module[module] = []
