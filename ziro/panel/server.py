@@ -1341,7 +1341,7 @@ async def create_scan(req: CreateScanRequest) -> dict[str, Any]:
             "- Focus on money: payment manipulation, balance bypass, gift card abuse"
         )
 
-    # Ultra Mode: Shannon-style structured methodology
+    # Ultra Mode: an external framework-style structured methodology
     if _panel_settings.get("ultra_mode"):
         parts.append(
             "<critical>\n"

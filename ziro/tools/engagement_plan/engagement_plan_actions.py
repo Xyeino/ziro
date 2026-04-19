@@ -1,6 +1,6 @@
 """Engagement planning tools — Rules of Engagement, ConOps, OPPLAN, Deconfliction.
 
-Decepticon has a dedicated 'Soundwave' agent that generates an engagement package
+A dedicated planning agent can generates an engagement package
 before any recon or exploit activity begins. Ziro doesn't need a separate agent
 for this — the root agent can produce the same artifacts directly via these
 tools, then reference them throughout the scan and include them in the final

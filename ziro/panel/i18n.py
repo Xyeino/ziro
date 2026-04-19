@@ -76,7 +76,7 @@ TRANSLATIONS = {
         "continue_scan": "Continue to scan →",
         # Settings
         "ultra_mode": "Ultra Mode",
-        "ultra_desc": "Shannon-style structured methodology with 5 parallel specialized agents",
+        "ultra_desc": "an external framework-style structured methodology with 5 parallel specialized agents",
         "api_keys_info": "API keys are stored locally and used during reconnaissance.",
         "save_keys": "Save Keys",
         "saving": "Saving...",

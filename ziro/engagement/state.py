@@ -1,6 +1,6 @@
 """Typed engagement state — structured facts about the target, injected into LLM context.
 
-Inspired by Pentest Copilot's EngagementState. The model sees an up-to-date XML
+Typed state container pattern for agent context enrichment. The model sees an up-to-date XML
 block with every known host, service, credential, session, and finding on every
 LLM call, instead of having to reconstruct context from raw tool output.
 

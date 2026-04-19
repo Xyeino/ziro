@@ -1,7 +1,7 @@
 """Command safety guardrails for terminal execution.
 
 Hard-blocks or requires approval for commands matching known destructive patterns.
-Inspired by Pentest Copilot's commandSafety.ts but expanded.
+Inspired by reference commandSafety.ts but expanded.
 """
 
 from __future__ import annotations

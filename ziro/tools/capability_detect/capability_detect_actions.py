@@ -1,6 +1,6 @@
 """Probe sandbox for installed tooling and produce a capabilities manifest.
 
-Inspired by Pentest Copilot's capability registry. Runs a single batched shell
+Inspired by reference capability registry. Runs a single batched shell
 probe listing ~60 common pentest binaries, parses what's present + versions,
 and caches the manifest so every agent knows what's available without trying
 and failing on missing tools.
