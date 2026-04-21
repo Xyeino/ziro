@@ -121,6 +121,24 @@ RUN curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main
 RUN ARCH=$(dpkg --print-architecture) && \
     curl -sSfL "https://github.com/gitleaks/gitleaks/releases/latest/download/gitleaks_8.27.2_linux_${ARCH}.tar.gz" | tar xz -C /usr/local/bin gitleaks || true
 
+# Mobile reverse engineering — jadx + apktool for APK decompile
+RUN apt-get update && apt-get install -y --no-install-recommends default-jre-headless && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN mkdir -p /opt/jadx && \
+    curl -sSL https://github.com/skylot/jadx/releases/latest/download/jadx-1.5.1.zip -o /tmp/jadx.zip && \
+    unzip -q -o /tmp/jadx.zip -d /opt/jadx && \
+    chmod +x /opt/jadx/bin/jadx && \
+    ln -sf /opt/jadx/bin/jadx /usr/local/bin/jadx && \
+    rm /tmp/jadx.zip
+
+RUN curl -sSL https://bitbucket.org/iBotPeaches/apktool/downloads/apktool_2.10.0.jar -o /usr/local/bin/apktool.jar && \
+    curl -sSL https://raw.githubusercontent.com/iBotPeaches/Apktool/master/scripts/linux/apktool -o /usr/local/bin/apktool && \
+    chmod +x /usr/local/bin/apktool
+
+# Frida + objection for dynamic mobile analysis
+RUN pip install --break-system-packages frida-tools objection || true
+
 RUN apt-get update && apt-get install -y zaproxy
 
 RUN curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin

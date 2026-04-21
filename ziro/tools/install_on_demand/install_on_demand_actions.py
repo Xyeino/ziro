@@ -53,6 +53,17 @@ _INSTALL_RECIPES: dict[str, str] = {
     "netexec": "pipx install netexec",
     "responder": "apt-get install -y responder",
     "bloodhound-python": "pipx install bloodhound",
+    # Mobile reverse engineering
+    "jadx": "bash -c 'mkdir -p /opt/jadx && curl -sSL https://github.com/skylot/jadx/releases/latest/download/jadx-1.5.1.zip -o /tmp/jadx.zip && unzip -q -o /tmp/jadx.zip -d /opt/jadx && chmod +x /opt/jadx/bin/jadx && ln -sf /opt/jadx/bin/jadx /usr/local/bin/jadx && ln -sf /opt/jadx/bin/jadx-gui /usr/local/bin/jadx-gui || true'",
+    "apktool": "bash -c 'curl -sSL https://bitbucket.org/iBotPeaches/apktool/downloads/apktool_2.10.0.jar -o /usr/local/bin/apktool.jar && curl -sSL https://raw.githubusercontent.com/iBotPeaches/Apktool/master/scripts/linux/apktool -o /usr/local/bin/apktool && chmod +x /usr/local/bin/apktool'",
+    "smali": "apt-get install -y smali",
+    "baksmali": "apt-get install -y baksmali",
+    "dex2jar": "bash -c 'cd /opt && curl -sSL https://github.com/pxb1988/dex2jar/releases/latest/download/dex-tools-v2.4.zip -o dex-tools.zip && unzip -q -o dex-tools.zip -d /opt && rm dex-tools.zip && chmod +x /opt/dex-tools-v2.4/*.sh && ln -sf /opt/dex-tools-v2.4/d2j-dex2jar.sh /usr/local/bin/d2j-dex2jar'",
+    "frida-tools": "pip install --break-system-packages frida-tools",
+    "class-dump": "bash -c 'curl -sSL https://github.com/nygard/class-dump/releases/download/3.5/class-dump-3.5.dmg -o /tmp/cd.dmg || echo \"class-dump requires macOS or prebuilt binary; operator must provide\"'",
+    "objection": "pip install --break-system-packages objection",
+    # Misc
+    "mobsf": "docker pull opensecurity/mobile-security-framework-mobsf:latest",
 }
 
 

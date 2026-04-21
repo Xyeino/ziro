@@ -85,11 +85,33 @@ def decompile_apk(
     duration = round(time.time() - t0, 1)
 
     if rc == 127:
-        return {
-            "success": False,
-            "error": f"{method} not installed in sandbox",
-            "hint": "install via install_tool_on_demand or add to Dockerfile",
-        }
+        # Try to auto-install and retry once
+        install_cmd = {
+            "jadx": "mkdir -p /opt/jadx && curl -sSL https://github.com/skylot/jadx/releases/latest/download/jadx-1.5.1.zip -o /tmp/jadx.zip && unzip -q -o /tmp/jadx.zip -d /opt/jadx && chmod +x /opt/jadx/bin/jadx && ln -sf /opt/jadx/bin/jadx /usr/local/bin/jadx",
+            "apktool": "curl -sSL https://bitbucket.org/iBotPeaches/apktool/downloads/apktool_2.10.0.jar -o /usr/local/bin/apktool.jar && curl -sSL https://raw.githubusercontent.com/iBotPeaches/Apktool/master/scripts/linux/apktool -o /usr/local/bin/apktool && chmod +x /usr/local/bin/apktool",
+        }.get(method)
+
+        if install_cmd:
+            try:
+                subprocess.run(
+                    ["bash", "-c", install_cmd],
+                    capture_output=True, text=True, timeout=180, check=False,
+                )
+                # Retry
+                rc, out, err = _run(cmd, timeout=timeout)
+            except Exception:  # noqa: BLE001
+                pass
+
+        if rc == 127:
+            return {
+                "success": False,
+                "error": f"{method} not installed in sandbox and auto-install failed",
+                "hint": (
+                    f"Run install_tool_on_demand(tool_name={method!r}) manually, "
+                    "or rebuild the sandbox image with the latest Dockerfile which "
+                    "bakes jadx + apktool in."
+                ),
+            }
 
     # Scan result
     file_count = 0
