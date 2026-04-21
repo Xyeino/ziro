@@ -337,4 +337,33 @@ export const api = {
   // Compliance
   getCompliance: () => fetchJSON<any>('/compliance'),
   getSecurityScore: () => fetchJSON<any>('/security-score'),
+
+  // v4.6+ dashboard aggregation
+  getDashboardSummary: () => fetchJSON<any>('/dashboard/summary'),
+  getSeverityTrend: () => fetchJSON<{ series: Array<{ hours_ago: number; CRITICAL: number; HIGH: number; MEDIUM: number; LOW: number; INFO: number }> }>('/dashboard/severity-trend'),
+  getTrafficStats: () => fetchJSON<any>('/traffic/stats'),
+
+  // Cost breakdown
+  getCostBreakdown: () => fetchJSON<any>('/cost-breakdown'),
+
+  // Approvals
+  getApprovals: () => fetchJSON<{ pending: any[]; count: number }>('/approvals'),
+  decideApproval: (id: string, approved: boolean, reason: string) =>
+    postJSON<any>(`/approval-decide/${id}`, { approved, reason, decided_by: 'operator' }),
+
+  // Checkpoints
+  getCheckpoints: () => fetchJSON<{ sessions: any[] }>('/checkpoints'),
+  saveCheckpoint: (session_id: string) => postJSON<any>('/checkpoints/save', { session_id }),
+  restoreCheckpoint: (session_id: string) => postJSON<any>('/checkpoints/restore', { session_id }),
+
+  // Pause/resume
+  pauseScan: (agent_id?: string) => postJSON<any>('/scan/pause', { agent_id: agent_id || '' }),
+  resumeScan: (agent_id?: string, message?: string) =>
+    postJSON<any>('/scan/resume', { agent_id: agent_id || '', message: message || '' }),
+
+  // Engagement state
+  getEngagementState: () => fetchJSON<any>('/engagement-state'),
+
+  // LLM debug
+  getLlmDebug: (agent_id: string) => fetchJSON<any>(`/llm-debug/${agent_id}`),
 };

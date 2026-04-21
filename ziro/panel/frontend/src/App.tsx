@@ -56,6 +56,17 @@ import { ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
 import ReactFlow, { Background, Controls, type Node, type Edge, Position, MarkerType } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { cn } from './lib/utils';
+import {
+  LiveTrafficMonitor,
+  DashboardV2,
+  EngagementStateView,
+  ApprovalsQueue,
+  CostBreakdown,
+  CheckpointsPage,
+  LlmDebugPage,
+  ScanControlBar,
+} from './new-pages';
+import { Wallet, Radio as RadioIcon, LayoutGrid, Inbox, Bookmark, Database as DbIcon, Bug as BugIcon } from 'lucide-react';
 
 // --- Types ---
 type ScanMode = 'standard' | 'full' | 'infra' | 'smartcontract';
@@ -111,7 +122,7 @@ function useApiPolling<T>(fetcher: () => Promise<T | null>, intervalMs = 3000) {
 // --- Main App Component ---
 export default function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('Tests');
+  const [activeTab, setActiveTab] = useState('Overview');
 
   const statusFetcher = useCallback(() => api.getStatus(), []);
   const vulnFetcher = useCallback(() => api.getVulnerabilities(), []);
@@ -130,7 +141,27 @@ export default function App() {
       <div className="flex-1 flex flex-col min-w-0">
         <Header scanStatus={scanStatus} connected={connected} llmStats={llmStats} />
         <main className="flex-1 overflow-y-auto p-6 lg:p-8 custom-scrollbar">
-          {activeTab === 'Tests' ? <Dashboard liveAgents={liveAgents} liveVulns={liveVulns} /> : activeTab === 'Agent Terminal' ? <AgentTerminal /> : activeTab === 'Target Overview' ? <TargetOverview scanStatus={scanStatus} /> : activeTab === 'Vulnerabilities' ? <Vulnerabilities liveVulns={liveVulns} /> : activeTab === 'Attack Surface' ? <AttackSurface /> : activeTab === 'Screenshots' ? <ScreenshotsGallery /> : activeTab === 'MITRE ATT&CK' ? <MitreHeatmap /> : activeTab === 'HTTP Log' ? <HttpRequestLog /> : activeTab === 'AI Chat' ? <AiChat /> : activeTab === 'Compliance' ? <CompliancePage /> : activeTab === 'History' ? <HistoryPage /> : activeTab === 'Replay' ? <ReplayPage /> : activeTab === 'Settings' ? <SettingsPage /> : <div className="text-[#8c8c8c] flex items-center justify-center h-full">Section under development</div>}
+          {activeTab === 'Tests' ? <Dashboard liveAgents={liveAgents} liveVulns={liveVulns} /> :
+           activeTab === 'Overview' ? <div className="space-y-4"><ScanControlBar /><DashboardV2 /></div> :
+           activeTab === 'Live Traffic' ? <LiveTrafficMonitor /> :
+           activeTab === 'Engagement' ? <EngagementStateView /> :
+           activeTab === 'Approvals' ? <ApprovalsQueue /> :
+           activeTab === 'Cost' ? <CostBreakdown /> :
+           activeTab === 'Checkpoints' ? <CheckpointsPage /> :
+           activeTab === 'LLM Debug' ? <LlmDebugPage /> :
+           activeTab === 'Agent Terminal' ? <AgentTerminal /> :
+           activeTab === 'Target Overview' ? <TargetOverview scanStatus={scanStatus} /> :
+           activeTab === 'Vulnerabilities' ? <Vulnerabilities liveVulns={liveVulns} /> :
+           activeTab === 'Attack Surface' ? <AttackSurface /> :
+           activeTab === 'Screenshots' ? <ScreenshotsGallery /> :
+           activeTab === 'MITRE ATT&CK' ? <MitreHeatmap /> :
+           activeTab === 'HTTP Log' ? <HttpRequestLog /> :
+           activeTab === 'AI Chat' ? <AiChat /> :
+           activeTab === 'Compliance' ? <CompliancePage /> :
+           activeTab === 'History' ? <HistoryPage /> :
+           activeTab === 'Replay' ? <ReplayPage /> :
+           activeTab === 'Settings' ? <SettingsPage /> :
+           <div className="text-[#8c8c8c] flex items-center justify-center h-full">Section under development</div>}
         </main>
       </div>
 
@@ -142,15 +173,22 @@ export default function App() {
 // --- Sidebar Component ---
 function Sidebar({ onNewTask, activeTab, setActiveTab }: { onNewTask: () => void, activeTab: string, setActiveTab: (t: string) => void }) {
   const navItems = [
+    { icon: LayoutGrid, label: 'Overview' },
     { icon: ClipboardList, label: 'Tests' },
+    { icon: RadioIcon, label: 'Live Traffic' },
+    { icon: DbIcon, label: 'Engagement' },
+    { icon: BugIcon, label: 'Vulnerabilities' },
+    { icon: Map, label: 'Attack Surface' },
+    { icon: Inbox, label: 'Approvals' },
+    { icon: Wallet, label: 'Cost' },
+    { icon: Bookmark, label: 'Checkpoints' },
     { icon: TerminalSquare, label: 'Agent Terminal' },
     { icon: Server, label: 'Target Overview' },
-    { icon: Map, label: 'Attack Surface' },
-    { icon: Bug, label: 'Vulnerabilities' },
     { icon: Camera, label: 'Screenshots' },
     { icon: Grid3X3, label: 'MITRE ATT&CK' },
     { icon: Layers, label: 'HTTP Log' },
     { icon: AtSign, label: 'AI Chat' },
+    { icon: Eye, label: 'LLM Debug' },
     { icon: Clock, label: 'History' },
     { icon: Activity, label: 'Replay' },
     { icon: Settings, label: 'Settings' },
