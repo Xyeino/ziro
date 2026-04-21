@@ -1,0 +1,19 @@
+<tools>
+  <tool name="generate_fix_patch">
+    <description>Ask the LLM to produce a unified-diff patch that remediates a finding.
+
+Either pass finding_id (pulls details from engagement state) or pass title + vuln_type + file_path + vulnerable_snippet directly. Returns patch_diff suitable for create_autofix_pr.
+
+LLM instructed to produce minimal, reviewable patches — not full refactors. Falls back to heuristic template when LLM unavailable.</description>
+    <parameters>
+      <parameter name="finding_id" type="string" required="false"></parameter>
+      <parameter name="title" type="string" required="false"></parameter>
+      <parameter name="vuln_type" type="string" required="false"></parameter>
+      <parameter name="file_path" type="string" required="false"></parameter>
+      <parameter name="vulnerable_snippet" type="string" required="false"></parameter>
+      <parameter name="context_before" type="integer" required="false"></parameter>
+      <parameter name="context_after" type="integer" required="false"></parameter>
+      <parameter name="remediation_hint" type="string" required="false"><description>Optional freeform hint to steer the LLM.</description></parameter>
+    </parameters>
+  </tool>
+</tools>

@@ -1,0 +1,24 @@
+<tools>
+  <tool name="create_skill">
+    <description>Scaffold a new Ziro skill — markdown file with frontmatter (name, description, mitre_techniques, kill_chain_phases, related_skills) + body.
+
+After creation the skill is immediately discoverable via load_skill / read_skill — no restart. Panel wizard sends these calls directly.
+
+Categories: vulnerabilities / frameworks / protocols / cloud / technologies / tooling / reconnaissance / analysis / scan_modes / threat_actors.</description>
+    <parameters>
+      <parameter name="name" type="string" required="true"></parameter>
+      <parameter name="description" type="string" required="true"><description>One-line summary shown in catalog.</description></parameter>
+      <parameter name="body" type="string" required="true"><description>Full markdown body of the skill.</description></parameter>
+      <parameter name="category" type="string" required="false"><description>Default vulnerabilities.</description></parameter>
+      <parameter name="mitre_techniques" type="list" required="false"></parameter>
+      <parameter name="kill_chain_phases" type="list" required="false"></parameter>
+      <parameter name="related_skills" type="list" required="false"></parameter>
+      <parameter name="overwrite" type="boolean" required="false"></parameter>
+    </parameters>
+  </tool>
+
+  <tool name="list_skill_categories">
+    <description>List available skill categories with skill counts.</description>
+    <parameters></parameters>
+  </tool>
+</tools>

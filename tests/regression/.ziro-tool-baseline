@@ -19,7 +19,9 @@ create_deconfliction_plan
 create_note
 create_opplan
 create_roe
+create_skill
 create_todo
+create_tool
 create_vulnerability_report
 delete_note
 delete_todo
@@ -33,8 +35,13 @@ download_js_bundles
 encode_payload
 fetch_source_map
 finish_scan
+frida_list_devices
+frida_list_processes
+frida_run_script
+frida_ssl_bypass
 fuzz_host_headers
 fuzz_request_parameter
+generate_fix_patch
 generate_implant
 generate_pdf_report
 generate_smart_wordlist
@@ -62,6 +69,7 @@ list_pending_handoffs
 list_requests
 list_sessions_and_beacons
 list_sitemap
+list_skill_categories
 list_todos
 list_workflow_templates
 load_payload_list

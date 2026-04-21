@@ -3661,6 +3661,289 @@ async def _broadcast_ws(data: dict[str, Any]) -> None:
                 _ws_clients.remove(ws)
 
 
+# --- Realtime traffic stream ---
+
+_traffic_ws_clients: list[WebSocket] = []
+
+
+@app.websocket("/ws/traffic")
+async def traffic_stream(ws: WebSocket) -> None:
+    """Real-time stream of proxy requests as they're captured. For live traffic panel.
+
+    Each message: {type: "request", method, url, status, duration_ms, timestamp,
+    preview (first 200 chars of body), size_bytes}.
+
+    Client can filter by URL/status on its side. Server pushes incrementally
+    — no polling.
+    """
+    await ws.accept()
+    _traffic_ws_clients.append(ws)
+    last_seen_id = 0
+    try:
+        # Send initial batch of last 50 requests
+        try:
+            from ziro.tools.proxy.proxy_actions import _proxy_history
+
+            initial = list(_proxy_history)[-50:]
+            if initial:
+                await ws.send_json({"type": "backfill", "count": len(initial)})
+                for r in initial:
+                    try:
+                        await ws.send_json(
+                            {
+                                "type": "request",
+                                "id": r.get("id", 0),
+                                "method": r.get("method", ""),
+                                "url": r.get("url", "")[:300],
+                                "status": r.get("status", 0),
+                                "duration_ms": r.get("duration_ms", 0),
+                                "timestamp": r.get("timestamp", ""),
+                                "size_bytes": r.get("response_size", 0),
+                                "preview": (r.get("response_body", "") or "")[:200],
+                            }
+                        )
+                        last_seen_id = max(last_seen_id, r.get("id", 0))
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+
+        # Stream new requests
+        while True:
+            try:
+                from ziro.tools.proxy.proxy_actions import _proxy_history
+
+                new_requests = [
+                    r for r in list(_proxy_history) if r.get("id", 0) > last_seen_id
+                ]
+                for r in new_requests[:200]:
+                    try:
+                        await ws.send_json(
+                            {
+                                "type": "request",
+                                "id": r.get("id", 0),
+                                "method": r.get("method", ""),
+                                "url": r.get("url", "")[:300],
+                                "status": r.get("status", 0),
+                                "duration_ms": r.get("duration_ms", 0),
+                                "timestamp": r.get("timestamp", ""),
+                                "size_bytes": r.get("response_size", 0),
+                                "preview": (r.get("response_body", "") or "")[:200],
+                            }
+                        )
+                        last_seen_id = max(last_seen_id, r.get("id", 0))
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+            await asyncio.sleep(1)
+    except WebSocketDisconnect:
+        pass
+    finally:
+        if ws in _traffic_ws_clients:
+            _traffic_ws_clients.remove(ws)
+
+
+@app.get("/api/dashboard/summary")
+async def dashboard_summary() -> dict[str, Any]:
+    """Dense dashboard summary in one round-trip — combines status/findings/cost/top-agents/activity.
+
+    Lets a new dashboard render without waterfall of sequential GETs.
+    """
+    out: dict[str, Any] = {}
+
+    total_agents = len(_agent_states)
+    running = sum(1 for s in _agent_states.values() if not s.completed)
+    waiting = sum(1 for s in _agent_states.values() if s.waiting_for_input)
+    completed = sum(1 for s in _agent_states.values() if s.completed)
+    out["agents"] = {
+        "total": total_agents,
+        "running": running,
+        "waiting": waiting,
+        "completed": completed,
+    }
+
+    try:
+        from ziro.engagement import get_engagement_state
+
+        st = get_engagement_state()
+        sev_counts: dict[str, int] = {}
+        status_counts: dict[str, int] = {}
+        for f in st.findings.values():
+            sev = (f.severity or "UNKNOWN").upper()
+            sev_counts[sev] = sev_counts.get(sev, 0) + 1
+            status_counts[f.status] = status_counts.get(f.status, 0) + 1
+        out["findings"] = {
+            "total": len(st.findings),
+            "by_severity": sev_counts,
+            "by_status": status_counts,
+            "hosts_enumerated": len(st.hosts),
+            "services_enumerated": len(st.services),
+            "credentials_found": len(st.credentials),
+        }
+    except Exception:
+        out["findings"] = {"total": 0}
+
+    cost_total = 0.0
+    tokens_in = 0
+    tokens_out = 0
+    try:
+        from ziro.tools.agents_graph.agents_graph_actions import _agent_instances
+
+        top_cost_agents = []
+        for aid, inst in _agent_instances.items():
+            if hasattr(inst, "llm") and hasattr(inst.llm, "_total_stats"):
+                s = inst.llm._total_stats
+                c = getattr(s, "cost", 0.0) or 0.0
+                cost_total += c
+                tokens_in += getattr(s, "input_tokens", 0) or 0
+                tokens_out += getattr(s, "output_tokens", 0) or 0
+                if c > 0:
+                    node = _agent_graph.get("nodes", {}).get(aid, {})
+                    top_cost_agents.append(
+                        {"agent_id": aid, "name": node.get("name", ""), "cost": round(c, 4)}
+                    )
+        top_cost_agents.sort(key=lambda r: -r["cost"])
+        out["cost"] = {
+            "total_usd": round(cost_total, 4),
+            "tokens_input": tokens_in,
+            "tokens_output": tokens_out,
+            "top_agents": top_cost_agents[:5],
+        }
+    except Exception:
+        out["cost"] = {"total_usd": 0.0}
+
+    try:
+        tracer = get_global_tracer()
+        if tracer:
+            execs = getattr(tracer, "tool_executions", None) or []
+            if callable(execs):
+                execs = execs()
+            recent = list(execs)[-15:]
+            out["recent_activity"] = [
+                {
+                    "agent_id": e.get("agent_id", ""),
+                    "tool": e.get("tool_name", ""),
+                    "status": e.get("status", ""),
+                    "duration_ms": e.get("duration_ms", 0),
+                    "started_at": e.get("started_at"),
+                }
+                for e in recent
+                if isinstance(e, dict)
+            ]
+    except Exception:
+        out["recent_activity"] = []
+
+    try:
+        import time as _time
+        from datetime import datetime
+
+        from ziro.engagement import get_engagement_state
+
+        st = get_engagement_state()
+        out["engagement"] = {"target": st.target, "started_at": st.started_at}
+        earliest = None
+        for state in _agent_states.values():
+            try:
+                ts = datetime.fromisoformat(state.start_time).timestamp()
+                if earliest is None or ts < earliest:
+                    earliest = ts
+            except Exception:
+                continue
+        if earliest:
+            out["engagement"]["runtime_seconds"] = round(_time.time() - earliest, 1)
+    except Exception:
+        out["engagement"] = {}
+
+    return out
+
+
+@app.get("/api/dashboard/severity-trend")
+async def severity_trend() -> dict[str, Any]:
+    """Findings-over-time series for dashboard sparkline. Buckets by hour, last 24 buckets."""
+    import time as _time
+    from datetime import datetime
+
+    try:
+        from ziro.engagement import get_engagement_state
+
+        st = get_engagement_state()
+        now = _time.time()
+        buckets: dict[int, dict[str, int]] = {}
+        for f in st.findings.values():
+            try:
+                ts = datetime.fromisoformat(f.created_at).timestamp() if f.created_at else now
+            except Exception:
+                ts = now
+            bucket = int((now - ts) // 3600)
+            if bucket > 24 or bucket < 0:
+                continue
+            if bucket not in buckets:
+                buckets[bucket] = {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0, "INFO": 0}
+            sev = (f.severity or "UNKNOWN").upper()
+            if sev in buckets[bucket]:
+                buckets[bucket][sev] += 1
+        series = []
+        for i in range(24, -1, -1):
+            b = buckets.get(i, {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0, "INFO": 0})
+            series.append({"hours_ago": i, **b})
+        return {"series": series}
+    except Exception as e:
+        return {"series": [], "error": str(e)}
+
+
+@app.get("/api/traffic/stats")
+async def get_traffic_stats() -> dict[str, Any]:
+    """Aggregate proxy traffic stats for dashboard panel — count by status/method/host."""
+    stats = {
+        "total": 0,
+        "by_status": {},
+        "by_method": {},
+        "by_host": {},
+        "recent_errors": [],
+        "avg_latency_ms": 0.0,
+    }
+    try:
+        from urllib.parse import urlparse
+
+        from ziro.tools.proxy.proxy_actions import _proxy_history
+
+        total_latency = 0.0
+        n = 0
+        for r in list(_proxy_history):
+            stats["total"] += 1
+            status = str(r.get("status", 0))
+            stats["by_status"][status] = stats["by_status"].get(status, 0) + 1
+            method = r.get("method", "GET")
+            stats["by_method"][method] = stats["by_method"].get(method, 0) + 1
+            try:
+                host = urlparse(r.get("url", "")).hostname or "unknown"
+            except Exception:
+                host = "unknown"
+            stats["by_host"][host] = stats["by_host"].get(host, 0) + 1
+
+            dur = r.get("duration_ms", 0) or 0
+            if dur:
+                total_latency += dur
+                n += 1
+
+            if int(r.get("status", 0) or 0) >= 500:
+                stats["recent_errors"].append(
+                    {
+                        "url": r.get("url", "")[:200],
+                        "status": r.get("status", 0),
+                        "timestamp": r.get("timestamp", ""),
+                    }
+                )
+
+        if n > 0:
+            stats["avg_latency_ms"] = round(total_latency / n, 1)
+        stats["recent_errors"] = stats["recent_errors"][-10:]
+    except Exception:
+        pass
+    return stats
+
+
 # --- Reconnaissance ---
 
 

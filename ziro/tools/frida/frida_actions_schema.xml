@@ -1,0 +1,41 @@
+<tools>
+  <tool name="frida_list_devices">
+    <description>List connected Frida devices (USB/adb/simulator).</description>
+    <parameters></parameters>
+  </tool>
+
+  <tool name="frida_list_processes">
+    <description>List processes running on the Frida-attached device.</description>
+    <parameters>
+      <parameter name="device" type="string" required="false"><description>usb / remote. Default usb.</description></parameter>
+    </parameters>
+  </tool>
+
+  <tool name="frida_run_script">
+    <description>Inject JavaScript Frida script into a running process; capture console output for wait_seconds.
+
+Script uses Frida JS API for runtime tracing, function hooking, SSL pinning bypass, root detection bypass, etc. mode=attach attaches to running; mode=spawn launches fresh.</description>
+    <parameters>
+      <parameter name="target" type="string" required="true"><description>Process name or PID.</description></parameter>
+      <parameter name="script_code" type="string" required="true"><description>JavaScript Frida API code.</description></parameter>
+      <parameter name="device" type="string" required="false"></parameter>
+      <parameter name="mode" type="string" required="false"><description>attach / spawn. Default attach.</description></parameter>
+      <parameter name="wait_seconds" type="integer" required="false"><description>Capture window before detaching.</description></parameter>
+    </parameters>
+  </tool>
+
+  <tool name="frida_ssl_bypass">
+    <description>Inject SSL pinning bypass into an Android/iOS app for MITM testing.
+
+Android covers: OkHttp3, TrustManager, WebView, HostnameVerifier, Conscrypt, Cronet.
+iOS covers: SecTrustEvaluateWithError, NSURLSession, URLSession, TrustKit, Alamofire.
+
+App launches via spawn and bypass hooks attach automatically.</description>
+    <parameters>
+      <parameter name="target_package" type="string" required="true"><description>Android package id (com.example.app) or iOS bundle id.</description></parameter>
+      <parameter name="platform" type="string" required="false"><description>android / ios. Default android.</description></parameter>
+      <parameter name="device" type="string" required="false"></parameter>
+      <parameter name="wait_seconds" type="integer" required="false"></parameter>
+    </parameters>
+  </tool>
+</tools>

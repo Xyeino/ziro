@@ -1,0 +1,18 @@
+<tools>
+  <tool name="create_tool">
+    <description>Scaffold a new Ziro tool — implementation .py + schema XML + __init__.py + auto-register in ziro/tools/__init__.py.
+
+parameters: list of {name, type, required, description} dicts. implementation_body: Python code for the function body (must return dict with "success" key). After creation, panel restart or importlib.reload makes the tool live.
+
+Enables a UI wizard flow: client fills form -> POST /api/tools/create -> tool scaffolded and registered.</description>
+    <parameters>
+      <parameter name="name" type="string" required="true"></parameter>
+      <parameter name="description" type="string" required="true"></parameter>
+      <parameter name="parameters" type="list" required="false"><description>List of {name, type, required, description} dicts.</description></parameter>
+      <parameter name="implementation_body" type="string" required="false"><description>Python body. Stub if empty.</description></parameter>
+      <parameter name="sandbox_execution" type="boolean" required="false"></parameter>
+      <parameter name="agent_roles" type="list" required="false"></parameter>
+      <parameter name="overwrite" type="boolean" required="false"></parameter>
+    </parameters>
+  </tool>
+</tools>
