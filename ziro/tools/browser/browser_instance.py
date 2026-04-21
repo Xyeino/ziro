@@ -79,6 +79,15 @@ async def _create_browser() -> Browser:
             headless=True,
             humanize=True,       # Human-like mouse movements
             geoip=False,         # No GeoIP lookup needed
+            # Firefox: disable strict cert checking for pentest targets with
+            # self-signed/expired certs. Without this, browser_action crashes
+            # on SEC_ERROR_UNKNOWN_ISSUER / SEC_ERROR_EXPIRED_CERTIFICATE.
+            firefox_user_prefs={
+                "security.cert_pinning.enforcement_level": 0,
+                "security.ssl.require_safe_negotiation": False,
+                "network.stricttransportsecurity.preloadlist": False,
+                "browser.xul.error_pages.enabled": False,
+            },
         )
         browser = await cm.__aenter__()
         _state._camoufox_context_manager = cm
@@ -95,6 +104,9 @@ async def _create_browser() -> Browser:
                 "--disable-dev-shm-usage",
                 "--disable-gpu",
                 "--disable-web-security",
+                "--ignore-certificate-errors",
+                "--ignore-certificate-errors-spki-list",
+                "--allow-running-insecure-content",
             ],
         )
         logger.info("Playwright Chromium browser launched (headless)")
@@ -164,6 +176,11 @@ class BrowserInstance:
 
         context_kwargs: dict[str, Any] = {
             "viewport": {"width": 1280, "height": 720},
+            # Accept self-signed / expired / untrusted certs. Scan targets
+            # often have broken PKI (dev environments, staging, CTFs) and
+            # blocking navigation on SEC_ERROR_UNKNOWN_ISSUER is never useful
+            # — the agent is there to INSPECT the target, not to trust it.
+            "ignore_https_errors": True,
         }
 
         if not _USE_CAMOUFOX:
