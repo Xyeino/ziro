@@ -60,7 +60,9 @@ class Config:
     ziro_disable_browser = "false"
 
     # Runtime Configuration
-    ziro_image = "ghcr.io/xyeino/ziro-sandbox:0.1.13"
+    # Use :latest so fresh installs always pull the freshest image.
+    # Override with ZIRO_IMAGE env var to pin a specific version.
+    ziro_image = "ghcr.io/xyeino/ziro-sandbox:latest"
     ziro_runtime_backend = "docker"
     ziro_sandbox_execution_timeout = "120"
     ziro_sandbox_connect_timeout = "10"
