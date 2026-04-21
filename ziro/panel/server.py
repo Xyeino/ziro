@@ -1028,6 +1028,25 @@ async def get_tool_executions() -> list[dict[str, Any]]:
     ]
 
 
+@app.get("/api/tools/registry")
+async def get_tool_registry() -> dict[str, Any]:
+    """List all registered tools for debugging — verifies sandbox + panel agree
+    on which tools are available.
+
+    If a tool appears in 'panel' but not 'reported_by_sandbox' it means the
+    sandbox container is running an older version of Ziro and needs to be
+    refreshed (rebuild image or restart container).
+    """
+    import ziro.tools  # noqa: F401
+    from ziro.tools.registry import get_tool_names
+
+    names = sorted(get_tool_names())
+    return {
+        "count": len(names),
+        "tools": names,
+    }
+
+
 @app.get("/api/scan-results")
 async def get_scan_results() -> dict[str, Any]:
     """Final scan results and summary."""
