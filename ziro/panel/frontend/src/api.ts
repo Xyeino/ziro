@@ -366,4 +366,33 @@ export const api = {
 
   // LLM debug
   getLlmDebug: (agent_id: string) => fetchJSON<any>(`/llm-debug/${agent_id}`),
+
+  // Code Workbench
+  workspaceTree: (path = '', max_depth = 4) =>
+    fetchJSON<any>(`/workspace/tree?path=${encodeURIComponent(path)}&max_depth=${max_depth}`),
+  workspaceReadFile: (path: string) =>
+    fetchJSON<any>(`/workspace/file?path=${encodeURIComponent(path)}`),
+  workspaceWriteFile: async (path: string, content: string) => {
+    const r = await fetch('/api/workspace/file', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path, content }),
+    });
+    return r.ok ? r.json() : null;
+  },
+  workspaceSearch: (query: string, root = '', is_regex = false, glob = '') =>
+    postJSON<any>('/workspace/search', { query, root, is_regex, glob }),
+  workspaceAiTask: (path: string, task: string, file_content?: string) =>
+    postJSON<any>('/workspace/ai-task', { path, task, file_content: file_content || '' }),
+
+  // Mobile
+  mobileProjects: () => fetchJSON<{ projects: any[]; count: number }>('/mobile/projects'),
+  mobileUpload: async (file: File) => {
+    const fd = new FormData();
+    fd.append('file', file);
+    const r = await fetch('/api/mobile/upload', { method: 'POST', body: fd });
+    return r.ok ? r.json() : null;
+  },
+  mobileDecompile: (path: string, kind: 'apk' | 'ipa', method?: string, project_name?: string) =>
+    postJSON<any>('/mobile/decompile', { path, kind, method, project_name }),
 };

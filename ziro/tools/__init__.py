@@ -37,6 +37,7 @@ from .knowledge_graph import *  # noqa: F403
 from .load_skill import *  # noqa: F403
 from .metasploit import *  # noqa: F403
 from .metrics import *  # noqa: F403
+from .mobile_decompile import *  # noqa: F403
 from .mobsf import *  # noqa: F403
 from .notes import *  # noqa: F403
 from .oob import *  # noqa: F403
@@ -76,6 +77,7 @@ from .tool_doc import *  # noqa: F403
 from .vector_memory import *  # noqa: F403
 from .web_search import *  # noqa: F403
 from .workflow_templates import *  # noqa: F403
+from .workspace_fs import *  # noqa: F403
 
 
 __all__ = [

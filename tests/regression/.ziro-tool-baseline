@@ -23,6 +23,8 @@ create_skill
 create_todo
 create_tool
 create_vulnerability_report
+decompile_apk
+decompile_ipa
 delete_note
 delete_todo
 detect_capabilities
@@ -47,6 +49,7 @@ generate_pdf_report
 generate_smart_wordlist
 get_attack_graph
 get_engagement_package
+get_file_tree
 get_session_timeline
 import_sarif
 install_tool_on_demand
@@ -61,6 +64,7 @@ list_evidence
 list_files
 list_findings_for_validation
 list_installable_tools
+list_mobile_projects
 list_notes
 list_payload_categories
 list_pcap_captures
@@ -92,6 +96,7 @@ poll_oob_interactions
 python_action
 read_skill
 read_tool_doc
+read_workspace_file
 record_credential
 record_finding
 record_host
@@ -114,6 +119,7 @@ scan_git_history
 scope_rules
 search_burp_proxy_history
 search_files
+search_workspace_files
 send_message_to_agent
 send_request
 sliver_command
@@ -138,3 +144,4 @@ view_engagement_state
 view_request
 view_sitemap_entry
 wait_for_message
+write_workspace_file

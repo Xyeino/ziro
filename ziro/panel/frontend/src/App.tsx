@@ -66,7 +66,8 @@ import {
   LlmDebugPage,
   ScanControlBar,
 } from './new-pages';
-import { Wallet, Radio as RadioIcon, LayoutGrid, Inbox, Bookmark, Database as DbIcon, Bug as BugIcon } from 'lucide-react';
+import { CodeWorkbench } from './code-workbench';
+import { Wallet, Radio as RadioIcon, LayoutGrid, Inbox, Bookmark, Database as DbIcon, Bug as BugIcon, Code as CodeIcon } from 'lucide-react';
 
 // --- Types ---
 type ScanMode = 'standard' | 'full' | 'infra' | 'smartcontract';
@@ -143,6 +144,7 @@ export default function App() {
         <main className="flex-1 overflow-y-auto p-6 lg:p-8 custom-scrollbar">
           {activeTab === 'Tests' ? <Dashboard liveAgents={liveAgents} liveVulns={liveVulns} /> :
            activeTab === 'Overview' ? <div className="space-y-4"><ScanControlBar /><DashboardV2 /></div> :
+           activeTab === 'Code Workbench' ? <CodeWorkbench /> :
            activeTab === 'Live Traffic' ? <LiveTrafficMonitor /> :
            activeTab === 'Engagement' ? <EngagementStateView /> :
            activeTab === 'Approvals' ? <ApprovalsQueue /> :
@@ -175,6 +177,7 @@ function Sidebar({ onNewTask, activeTab, setActiveTab }: { onNewTask: () => void
   const navItems = [
     { icon: LayoutGrid, label: 'Overview' },
     { icon: ClipboardList, label: 'Tests' },
+    { icon: CodeIcon, label: 'Code Workbench' },
     { icon: RadioIcon, label: 'Live Traffic' },
     { icon: DbIcon, label: 'Engagement' },
     { icon: BugIcon, label: 'Vulnerabilities' },

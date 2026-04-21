@@ -1,0 +1,26 @@
+<tools>
+  <tool name="decompile_apk">
+    <description>Decompile Android APK to readable source. method=jadx produces Java source + resources (readable); method=apktool produces smali + resources (closer to bytecode). Output in /workspace/mobile-projects/&lt;name&gt;/&lt;method&gt;/. Parses AndroidManifest.xml for package/version/SDK metadata.</description>
+    <parameters>
+      <parameter name="apk_path" type="string" required="true"></parameter>
+      <parameter name="method" type="string" required="false"><description>jadx / apktool. Default jadx.</description></parameter>
+      <parameter name="project_name" type="string" required="false"></parameter>
+      <parameter name="timeout" type="integer" required="false"></parameter>
+    </parameters>
+  </tool>
+
+  <tool name="decompile_ipa">
+    <description>Decompile iOS IPA: unzip Payload, run class-dump for ObjC headers, otool for Mach-O metadata, plist parse for bundle_id/version. method=class-dump / otool / auto.</description>
+    <parameters>
+      <parameter name="ipa_path" type="string" required="true"></parameter>
+      <parameter name="method" type="string" required="false"><description>Default auto.</description></parameter>
+      <parameter name="project_name" type="string" required="false"></parameter>
+      <parameter name="timeout" type="integer" required="false"></parameter>
+    </parameters>
+  </tool>
+
+  <tool name="list_mobile_projects">
+    <description>List decompiled mobile projects in /workspace/mobile-projects/.</description>
+    <parameters></parameters>
+  </tool>
+</tools>

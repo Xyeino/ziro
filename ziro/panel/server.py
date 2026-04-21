@@ -26,7 +26,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, File, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
@@ -3742,6 +3742,210 @@ async def traffic_stream(ws: WebSocket) -> None:
     finally:
         if ws in _traffic_ws_clients:
             _traffic_ws_clients.remove(ws)
+
+
+# --- Code Workbench / Mobile decompile / AI task endpoints ---
+
+@app.get("/api/workspace/tree")
+async def workspace_tree(path: str = "", max_depth: int = 4, show_hidden: bool = False) -> dict[str, Any]:
+    """File tree for Code Workbench panel."""
+    try:
+        from ziro.tools.workspace_fs.workspace_fs_actions import get_file_tree
+
+        return get_file_tree(None, path=path, max_depth=max_depth, show_hidden=show_hidden)
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@app.get("/api/workspace/file")
+async def workspace_read(path: str, max_bytes: int = 0) -> dict[str, Any]:
+    """Read a workspace file for the editor."""
+    try:
+        from ziro.tools.workspace_fs.workspace_fs_actions import read_workspace_file
+
+        return read_workspace_file(None, path=path, max_bytes=max_bytes)
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@app.put("/api/workspace/file")
+async def workspace_write(body: dict[str, Any]) -> dict[str, Any]:
+    """Write a workspace file — saves operator edits from the editor."""
+    try:
+        from ziro.tools.workspace_fs.workspace_fs_actions import write_workspace_file
+
+        path = (body or {}).get("path", "")
+        content = (body or {}).get("content", "")
+        if not path:
+            raise HTTPException(status_code=400, detail="path required")
+        return write_workspace_file(None, path=path, content=content)
+    except HTTPException:
+        raise
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@app.post("/api/workspace/search")
+async def workspace_search(body: dict[str, Any]) -> dict[str, Any]:
+    """Search across workspace files."""
+    try:
+        from ziro.tools.workspace_fs.workspace_fs_actions import search_workspace_files
+
+        return search_workspace_files(
+            None,
+            query=(body or {}).get("query", ""),
+            root=(body or {}).get("root", ""),
+            is_regex=bool((body or {}).get("is_regex", False)),
+            case_sensitive=bool((body or {}).get("case_sensitive", False)),
+            glob=(body or {}).get("glob", ""),
+            max_matches=int((body or {}).get("max_matches", 200)),
+            context_lines=int((body or {}).get("context_lines", 2)),
+        )
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@app.post("/api/workspace/ai-task")
+async def workspace_ai_task(body: dict[str, Any]) -> dict[str, Any]:
+    """Send a freeform AI task scoped to a workspace path.
+
+    Body: {path: str, task: str, file_content?: str}
+
+    Delivers the task to the currently running root agent as an injected
+    user message. If no scan is running, returns an error asking operator
+    to start a scan first. Returns fast — agent processes asynchronously.
+    """
+    path = (body or {}).get("path", "")
+    task = (body or {}).get("task", "").strip()
+    file_content = (body or {}).get("file_content", "")
+
+    if not task:
+        raise HTTPException(status_code=400, detail="task required")
+
+    # Build a rich prompt the agent can act on
+    prompt_lines = [
+        f"## Operator AI task — scoped to workspace path: {path or '/workspace'}",
+        "",
+        task,
+        "",
+    ]
+    if file_content:
+        preview = file_content[:4000]
+        prompt_lines += [
+            f"### Current file content ({len(file_content)} chars, showing first 4000):",
+            "```",
+            preview,
+            "```",
+        ]
+    prompt_lines += [
+        "",
+        "Use read_workspace_file / search_workspace_files / write_workspace_file to "
+        "work with the code. If the task involves modification, produce a minimal "
+        "diff and offer write_workspace_file before applying.",
+    ]
+    prompt = "\n".join(prompt_lines)
+
+    # Route to root agent if available
+    target_agent_id = None
+    for aid, state in _agent_states.items():
+        node = _agent_graph.get("nodes", {}).get(aid, {})
+        if node.get("role") == "root" or node.get("is_root"):
+            target_agent_id = aid
+            break
+    if not target_agent_id and _agent_states:
+        target_agent_id = next(iter(_agent_states.keys()))
+
+    if not target_agent_id:
+        return {
+            "success": False,
+            "error": "No running agent to receive task. Start a scan first, or use CLI for offline analysis.",
+        }
+
+    state = _agent_states[target_agent_id]
+    state.add_message("user", prompt)
+    # If the agent was waiting, resume it
+    if state.waiting_for_input:
+        state.resume_from_waiting()
+
+    return {
+        "success": True,
+        "agent_id": target_agent_id,
+        "task_length": len(task),
+        "scoped_path": path,
+        "note": "Task injected. Monitor progress via Agent Terminal or LLM Debug pages.",
+    }
+
+
+# --- Mobile-specific endpoints ---
+
+@app.get("/api/mobile/projects")
+async def mobile_projects() -> dict[str, Any]:
+    """List decompiled mobile projects."""
+    try:
+        from ziro.tools.mobile_decompile.mobile_decompile_actions import list_mobile_projects
+
+        return list_mobile_projects(None)
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@app.post("/api/mobile/upload")
+async def mobile_upload(file: UploadFile = File(...)) -> dict[str, Any]:
+    """Upload an APK/IPA/AAB to /workspace/mobile-uploads/. Returns path for decompile."""
+    import os as _os
+    import shutil as _shutil
+
+    filename = file.filename or "upload.bin"
+    if not any(filename.lower().endswith(ext) for ext in (".apk", ".ipa", ".aab", ".xapk", ".zip")):
+        raise HTTPException(status_code=400, detail="Unsupported file type (expected .apk/.ipa/.aab/.xapk)")
+
+    dst_dir = "/workspace/mobile-uploads"
+    _os.makedirs(dst_dir, exist_ok=True)
+    dst = _os.path.join(dst_dir, filename)
+    try:
+        with open(dst, "wb") as f:
+            _shutil.copyfileobj(file.file, f)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Upload failed: {e!s}")
+
+    return {
+        "success": True,
+        "path": dst,
+        "size_bytes": _os.path.getsize(dst),
+        "filename": filename,
+        "next_step": f"POST /api/mobile/decompile with {{path: {dst!r}, kind: 'apk'|'ipa'}}",
+    }
+
+
+@app.post("/api/mobile/decompile")
+async def mobile_decompile(body: dict[str, Any]) -> dict[str, Any]:
+    """Trigger APK/IPA decompilation. Returns project metadata for the Workbench."""
+    path = (body or {}).get("path", "")
+    kind = (body or {}).get("kind", "apk").lower()
+    method = (body or {}).get("method", "")
+    project_name = (body or {}).get("project_name", "")
+
+    if not path:
+        raise HTTPException(status_code=400, detail="path required")
+
+    try:
+        if kind == "apk":
+            from ziro.tools.mobile_decompile.mobile_decompile_actions import decompile_apk
+
+            return decompile_apk(
+                None, apk_path=path, method=method or "jadx", project_name=project_name,
+            )
+        if kind == "ipa":
+            from ziro.tools.mobile_decompile.mobile_decompile_actions import decompile_ipa
+
+            return decompile_ipa(
+                None, ipa_path=path, method=method or "auto", project_name=project_name,
+            )
+        raise HTTPException(status_code=400, detail=f"Unknown kind: {kind}")
+    except HTTPException:
+        raise
+    except Exception as e:
+        return {"success": False, "error": str(e)}
 
 
 @app.get("/api/dashboard/summary")

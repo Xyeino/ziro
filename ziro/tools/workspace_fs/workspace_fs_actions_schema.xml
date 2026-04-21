@@ -1,0 +1,41 @@
+<tools>
+  <tool name="get_file_tree">
+    <description>Return nested file tree for Code Workbench panel. Skips node_modules / .git / __pycache__ etc. Caps at 5000 entries, max_depth default 4.</description>
+    <parameters>
+      <parameter name="path" type="string" required="false"><description>Relative to /workspace, or absolute. Empty = workspace root.</description></parameter>
+      <parameter name="max_depth" type="integer" required="false"></parameter>
+      <parameter name="show_hidden" type="boolean" required="false"></parameter>
+    </parameters>
+  </tool>
+
+  <tool name="read_workspace_file">
+    <description>Read a file under /workspace. 2MB cap. Binary files return metadata only.</description>
+    <parameters>
+      <parameter name="path" type="string" required="true"></parameter>
+      <parameter name="max_bytes" type="integer" required="false"></parameter>
+      <parameter name="offset" type="integer" required="false"></parameter>
+    </parameters>
+  </tool>
+
+  <tool name="write_workspace_file">
+    <description>Write content to a workspace file. Creates parent dirs. Used by Workbench editor to save edits.</description>
+    <parameters>
+      <parameter name="path" type="string" required="true"></parameter>
+      <parameter name="content" type="string" required="true"></parameter>
+      <parameter name="create_dirs" type="boolean" required="false"></parameter>
+    </parameters>
+  </tool>
+
+  <tool name="search_workspace_files">
+    <description>Grep-style search across workspace. Skips binary files, supports regex, case sensitivity, glob filter, context lines.</description>
+    <parameters>
+      <parameter name="query" type="string" required="true"></parameter>
+      <parameter name="root" type="string" required="false"></parameter>
+      <parameter name="is_regex" type="boolean" required="false"></parameter>
+      <parameter name="case_sensitive" type="boolean" required="false"></parameter>
+      <parameter name="glob" type="string" required="false"><description>e.g. '*.java' / 'AndroidManifest.xml'</description></parameter>
+      <parameter name="max_matches" type="integer" required="false"></parameter>
+      <parameter name="context_lines" type="integer" required="false"></parameter>
+    </parameters>
+  </tool>
+</tools>
