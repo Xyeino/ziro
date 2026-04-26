@@ -176,13 +176,25 @@ sudo -E -u pentester \
   --port="$TOOL_SERVER_PORT" \
   --timeout="$TOOL_SERVER_TIMEOUT" > "$TOOL_SERVER_LOG" 2>&1 &
 
-for i in {1..10}; do
-  if curl -s "http://127.0.0.1:$TOOL_SERVER_PORT/health" | grep -q '"status":"healthy"'; then
-    echo "✅ Tool server healthy on port $TOOL_SERVER_PORT"
+# Accept both "healthy" and "degraded" — degraded means an optional sub-check
+# (e.g. tmux missing, libtmux not loadable) but the registry + tool execution
+# work fine. The panel-side runtime polls /health independently and accepts
+# both statuses too (docker_runtime.py line 130). Rejecting degraded here was
+# a false-negative that killed the container even though the server itself was
+# perfectly responsive.
+for i in {1..15}; do
+  HEALTH_BODY=$(curl -s "http://127.0.0.1:$TOOL_SERVER_PORT/health" 2>/dev/null || true)
+  if echo "$HEALTH_BODY" | grep -qE '"status":"(healthy|degraded)"'; then
+    if echo "$HEALTH_BODY" | grep -q '"status":"degraded"'; then
+      echo "⚠ Tool server in DEGRADED mode (some optional checks failed) — proceeding."
+      echo "  Health: $HEALTH_BODY"
+    else
+      echo "✅ Tool server healthy on port $TOOL_SERVER_PORT"
+    fi
     break
   fi
-  if [ $i -eq 10 ]; then
-    echo "ERROR: Tool server failed to become healthy"
+  if [ $i -eq 15 ]; then
+    echo "ERROR: Tool server failed to respond to /health"
     echo "=== Tool server log ==="
     cat "$TOOL_SERVER_LOG" 2>/dev/null || echo "(no log)"
     exit 1
