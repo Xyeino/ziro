@@ -240,6 +240,20 @@ COPY ziro/telemetry/ /app/ziro/telemetry/
 COPY ziro/runtime/tool_server.py ziro/runtime/__init__.py ziro/runtime/runtime.py /app/ziro/runtime/
 COPY ziro/tools/ /app/ziro/tools/
 
+# Modules imported by tools at runtime — must all be present in sandbox
+# or imports fail with `No module named 'ziro.X'` and tools crash.
+COPY ziro/engagement/ /app/ziro/engagement/
+COPY ziro/knowledge_graph/ /app/ziro/knowledge_graph/
+COPY ziro/vector_memory/ /app/ziro/vector_memory/
+COPY ziro/persistence/ /app/ziro/persistence/
+COPY ziro/scope/ /app/ziro/scope/
+COPY ziro/dryrun/ /app/ziro/dryrun/
+COPY ziro/payloads/ /app/ziro/payloads/
+COPY ziro/skills/ /app/ziro/skills/
+COPY ziro/personas/ /app/ziro/personas/
+COPY ziro/threat_actors/ /app/ziro/threat_actors/
+COPY ziro/playbooks/ /app/ziro/playbooks/
+
 RUN echo 'export PATH="/home/pentester/go/bin:/home/pentester/.local/bin:/home/pentester/.npm-global/bin:$PATH"' >> /home/pentester/.bashrc && \
     echo 'export PATH="/home/pentester/go/bin:/home/pentester/.local/bin:/home/pentester/.npm-global/bin:$PATH"' >> /home/pentester/.profile
 
