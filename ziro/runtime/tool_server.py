@@ -75,10 +75,29 @@ class ToolExecutionResponse(BaseModel):
     error: str | None = None
 
 
+class _SandboxAgentState:
+    """Thin shim that satisfies tool functions expecting an agent_state object.
+
+    Tools running inside the sandbox don't have access to the panel's full
+    AgentState (which carries conversation history, sandbox info, LLM
+    instance, etc.). They only need an object that exposes `agent_id` so
+    they can tag artifacts, plus optional attribute lookups via getattr.
+    """
+
+    def __init__(self, agent_id: str) -> None:
+        self.agent_id = agent_id
+
+    def __getattr__(self, name: str) -> None:
+        # Return None for any attribute we don't explicitly set, so tools
+        # that do `getattr(agent_state, "x", default)` keep working without
+        # AttributeError.
+        return None
+
+
 async def _run_tool(agent_id: str, tool_name: str, kwargs: dict[str, Any]) -> Any:
     from ziro.tools.argument_parser import convert_arguments
     from ziro.tools.context import set_current_agent_id
-    from ziro.tools.registry import get_tool_by_name
+    from ziro.tools.registry import get_tool_by_name, needs_agent_state
 
     set_current_agent_id(agent_id)
 
@@ -87,6 +106,15 @@ async def _run_tool(agent_id: str, tool_name: str, kwargs: dict[str, Any]) -> An
         raise ValueError(f"Tool '{tool_name}' not found")
 
     converted_kwargs = convert_arguments(tool_func, kwargs)
+
+    # Inject agent_state if the tool needs it. The panel-side executor
+    # (ziro/tools/executor.py::_execute_tool_locally) already does this; the
+    # sandbox tool_server was missing the same step, so any tool whose first
+    # positional arg is `agent_state: Any` (no default) crashed with
+    # `missing 1 required positional argument: 'agent_state'`.
+    if needs_agent_state(tool_name):
+        converted_kwargs["agent_state"] = _SandboxAgentState(agent_id)
+
     return await asyncio.to_thread(tool_func, **converted_kwargs)
 
 
