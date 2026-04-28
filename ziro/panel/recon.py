@@ -99,7 +99,7 @@ async def _sandbox_exec(
                 headers=headers,
                 timeout=httpx.Timeout(8, connect=5),
             )
-            probe_data = probe.json().get("result", {})
+            probe_data = (probe.json() or {}).get("result") or {}
             if probe_data.get("status") == "running":
                 # Previous command still running — interrupt it
                 await client.post(
@@ -128,8 +128,19 @@ async def _sandbox_exec(
                 timeout=httpx.Timeout(timeout + 30, connect=10),
             )
             response.raise_for_status()
-            data = response.json()
-            return data.get("result", {})
+            data = response.json() or {}
+            # tool_server returns {"result": null, "error": "..."} on failure.
+            # `dict.get(key, default)` returns the stored value when the key
+            # exists, even if it's None — the default only kicks in for missing
+            # keys. So we must coerce None to a fresh dict ourselves, otherwise
+            # callers crash with `'NoneType' object has no attribute 'get'`.
+            result = data.get("result")
+            if result is None:
+                err = data.get("error") or "Tool returned no result"
+                return {"error": err, "content": ""}
+            if not isinstance(result, dict):
+                return {"content": str(result), "error": ""}
+            return result
         except httpx.TimeoutException:
             return {"error": "Command timed out", "content": ""}
         except Exception as e:
