@@ -85,10 +85,30 @@ def decompile_apk(
     duration = round(time.time() - t0, 1)
 
     if rc == 127:
-        # Try to auto-install and retry once
+        # Try to auto-install and retry once. Discover latest jadx version
+        # dynamically rather than hardcoding (the asset name embeds the version,
+        # so the path '/releases/latest/download/jadx-X.Y.Z.zip' won't auto-redirect
+        # to the right file when X.Y.Z drifts).
         install_cmd = {
-            "jadx": "mkdir -p /opt/jadx && curl -sSL https://github.com/skylot/jadx/releases/latest/download/jadx-1.5.1.zip -o /tmp/jadx.zip && unzip -q -o /tmp/jadx.zip -d /opt/jadx && chmod +x /opt/jadx/bin/jadx && ln -sf /opt/jadx/bin/jadx /usr/local/bin/jadx",
-            "apktool": "curl -sSL https://bitbucket.org/iBotPeaches/apktool/downloads/apktool_2.10.0.jar -o /usr/local/bin/apktool.jar && curl -sSL https://raw.githubusercontent.com/iBotPeaches/Apktool/master/scripts/linux/apktool -o /usr/local/bin/apktool && chmod +x /usr/local/bin/apktool",
+            "jadx": (
+                "set -e; "
+                'JADX_VER=$(curl -fsSL https://api.github.com/repos/skylot/jadx/releases/latest '
+                '| grep \'"tag_name"\' | head -1 | sed -E \'s/.*"v?([^"]+)".*/\\1/\'); '
+                "JADX_VER=${JADX_VER:-1.5.5}; "
+                "mkdir -p /opt/jadx && "
+                "curl -fsSL --retry 3 https://github.com/skylot/jadx/releases/download/v${JADX_VER}/jadx-${JADX_VER}.zip -o /tmp/jadx.zip && "
+                "test -s /tmp/jadx.zip && "
+                "unzip -q -o /tmp/jadx.zip -d /opt/jadx && "
+                "chmod +x /opt/jadx/bin/jadx && "
+                "ln -sf /opt/jadx/bin/jadx /usr/local/bin/jadx"
+            ),
+            "apktool": (
+                "set -e; "
+                "curl -fsSL --retry 3 https://bitbucket.org/iBotPeaches/apktool/downloads/apktool_2.10.0.jar -o /usr/local/bin/apktool.jar && "
+                "test -s /usr/local/bin/apktool.jar && "
+                "curl -fsSL --retry 3 https://raw.githubusercontent.com/iBotPeaches/Apktool/master/scripts/linux/apktool -o /usr/local/bin/apktool && "
+                "chmod +x /usr/local/bin/apktool"
+            ),
         }.get(method)
 
         if install_cmd:

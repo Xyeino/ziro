@@ -125,16 +125,30 @@ RUN ARCH=$(dpkg --print-architecture) && \
 RUN apt-get update && apt-get install -y --no-install-recommends default-jre-headless && \
     rm -rf /var/lib/apt/lists/*
 
-RUN mkdir -p /opt/jadx && \
-    curl -sSL https://github.com/skylot/jadx/releases/latest/download/jadx-1.5.1.zip -o /tmp/jadx.zip && \
-    unzip -q -o /tmp/jadx.zip -d /opt/jadx && \
-    chmod +x /opt/jadx/bin/jadx && \
-    ln -sf /opt/jadx/bin/jadx /usr/local/bin/jadx && \
-    rm /tmp/jadx.zip
+# jadx — fetch latest release tag dynamically (asset name embeds version)
+RUN set -eux; \
+    mkdir -p /opt/jadx; \
+    JADX_VER=$(curl -fsSL https://api.github.com/repos/skylot/jadx/releases/latest | grep '"tag_name"' | head -1 | sed -E 's/.*"v?([^"]+)".*/\1/'); \
+    JADX_VER="${JADX_VER:-1.5.5}"; \
+    echo "Installing jadx ${JADX_VER}"; \
+    curl -fsSL --retry 3 "https://github.com/skylot/jadx/releases/download/v${JADX_VER}/jadx-${JADX_VER}.zip" -o /tmp/jadx.zip; \
+    test -s /tmp/jadx.zip; \
+    unzip -q -o /tmp/jadx.zip -d /opt/jadx; \
+    chmod +x /opt/jadx/bin/jadx; \
+    ln -sf /opt/jadx/bin/jadx /usr/local/bin/jadx; \
+    rm /tmp/jadx.zip; \
+    /usr/local/bin/jadx --version || true
 
-RUN curl -sSL https://bitbucket.org/iBotPeaches/apktool/downloads/apktool_2.10.0.jar -o /usr/local/bin/apktool.jar && \
-    curl -sSL https://raw.githubusercontent.com/iBotPeaches/Apktool/master/scripts/linux/apktool -o /usr/local/bin/apktool && \
-    chmod +x /usr/local/bin/apktool
+# apktool — also fetch latest dynamically
+RUN set -eux; \
+    APKTOOL_VER=$(curl -fsSL https://api.bitbucket.org/2.0/repositories/iBotPeaches/apktool/downloads/ 2>/dev/null | grep -oE 'apktool_[0-9]+\.[0-9]+\.[0-9]+\.jar' | head -1 | sed -E 's/apktool_([0-9.]+)\.jar/\1/' || echo ""); \
+    APKTOOL_VER="${APKTOOL_VER:-2.10.0}"; \
+    echo "Installing apktool ${APKTOOL_VER}"; \
+    curl -fsSL --retry 3 "https://bitbucket.org/iBotPeaches/apktool/downloads/apktool_${APKTOOL_VER}.jar" -o /usr/local/bin/apktool.jar; \
+    test -s /usr/local/bin/apktool.jar; \
+    curl -fsSL --retry 3 https://raw.githubusercontent.com/iBotPeaches/Apktool/master/scripts/linux/apktool -o /usr/local/bin/apktool; \
+    chmod +x /usr/local/bin/apktool; \
+    /usr/local/bin/apktool --version || true
 
 # Frida + objection for dynamic mobile analysis
 RUN pip install --break-system-packages frida-tools objection || true
